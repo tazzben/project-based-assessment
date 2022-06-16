@@ -1,1 +1,1 @@
-from .Solver import solve, bootstrap, getResults
+from .Solver import solve, bootstrap, getResults, DisplayResults, SaveResults

@@ -111,3 +111,18 @@ def DisplayResults(dataset,c=0.025, rubric=False, n=10000):
 	print('Number of Parameters:', str(param))
 	print('AIC:', str(AIC))
 	print('BIC:', str(BIC))
+	return (rubricR, studentR, bootstrapR, countE, obs, param, AIC, BIC)
+
+def SaveResults(dataset,c=0.025, rubric=False, n=10000):
+	rubricR, studentR, bootstrapR, countE, obs, param, AIC, BIC  = DisplayResults(dataset, c, rubric, n)
+	rubricR.to_csv('rubric.csv')
+	studentR.to_csv('student.csv')
+	bootstrapR.to_csv('bootstrap.csv')
+	output = {
+		'Number of Observations': obs,
+		'Number of Parameters': param,
+		'AIC': AIC,
+		'BIC': BIC,
+	}
+	pd.DataFrame.from_dict(output, orient='index').to_csv('output.csv')
+	return (rubricR, studentR, bootstrapR, countE, obs, param, AIC, BIC)
