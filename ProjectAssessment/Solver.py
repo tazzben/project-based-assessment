@@ -78,6 +78,8 @@ def getResults(dataset,c=0.025, rubric=False, n=10000):
 	# 	[k, student, rubric, bound],
 	# ]
 	dataset.dropna(inplace=True)
+	if set(['k','bound', 'student', 'rubric']).issubset(df.columns) is False:
+		raise Exception('Invalid pandas dataset, missing columns. k, bound, student, and rubric are required.')
 	dataset = dataset[dataset.k.apply(lambda x: x.isnumeric())]
 	dataset = dataset[dataset.bound.apply(lambda x: x.isnumeric())]
 	estimates = solve(dataset)
