@@ -77,6 +77,32 @@ def bootstrap(dataset, n, rubric=False):
 	}
 
 def getResults(dataset,c=0.025, rubric=False, n=10000):
+	"""
+	Estimates the parameters of the model and produces confidence intervals for the estimates using a bootstrap method. 
+	
+	Parameters:
+	-----------
+	dataset : Pandas DataFrame 
+		A dataframe with the following columns: k, student, rubric, bound.  Student and rubric identifiers for the student and rubric items.  Bound is maximum bin in the rubric that can be reached.  k is the bin the bin the student reached on a given rubric item. 
+	c : float
+		Confidence level for the confidence intervals.  Defaults to 0.025.
+	rubric : bool
+		Switches the bootstrap to treating the rubric rows as blocks instead of the students.  Defaults to False.  
+	n : int
+		Number of iterations for the bootstrap.  Defaults to 10000.
+	
+	Returns: 
+		Tuple:
+			Rubric Estimates : Pandas DataFrame
+			Student Estimates : Pandas DataFrame
+			Bootstrap CIs : Pandas DataFrame
+			# of Times no solution could be found in the Bootstrap : int
+			Number of Observations : int
+			Number of Parameters : int
+			AIC : float
+			BIC : float
+
+	"""
 	dataset.dropna(inplace=True)
 	if set(['k','bound', 'student', 'rubric']).issubset(df.columns) is False:
 		raise Exception('Invalid pandas dataset, missing columns. k, bound, student, and rubric are required.')
@@ -98,6 +124,32 @@ def getResults(dataset,c=0.025, rubric=False, n=10000):
 		raise Exception('Could not find estimates.')
 
 def DisplayResults(dataset,c=0.025, rubric=False, n=10000):
+	"""
+	Estimates the parameters of the model and produces confidence intervals for the estimates using a bootstrap method. Results are printed out to the console.
+	
+	Parameters:
+	-----------
+	dataset : Pandas DataFrame 
+		A dataframe with the following columns: k, student, rubric, bound.  Student and rubric identifiers for the student and rubric items.  Bound is maximum bin in the rubric that can be reached.  k is the bin the bin the student reached on a given rubric item. 
+	c : float
+		Confidence level for the confidence intervals.  Defaults to 0.025.
+	rubric : bool
+		Switches the bootstrap to treating the rubric rows as blocks instead of the students.  Defaults to False.  
+	n : int
+		Number of iterations for the bootstrap.  Defaults to 10000.
+	
+	Returns: 
+		Tuple:
+			Rubric Estimates : Pandas DataFrame
+			Student Estimates : Pandas DataFrame
+			Bootstrap CIs : Pandas DataFrame
+			# of Times no solution could be found in the Bootstrap : int
+			Number of Observations : int
+			Number of Parameters : int
+			AIC : float
+			BIC : float
+		
+	"""
 	rubricR, studentR, bootstrapR, countE, obs, param, AIC, BIC  = getResults(dataset, c, rubric, n)
 	print('Rubric Estimates:')
 	print(rubricR)
@@ -114,6 +166,32 @@ def DisplayResults(dataset,c=0.025, rubric=False, n=10000):
 	return (rubricR, studentR, bootstrapR, countE, obs, param, AIC, BIC)
 
 def SaveResults(dataset,c=0.025, rubric=False, n=10000):
+	"""
+	Estimates the parameters of the model and produces confidence intervals for the estimates using a bootstrap method. Results are printed out to the console and results are saved to CSV files.
+	
+	Parameters:
+	-----------
+	dataset : Pandas DataFrame 
+		A dataframe with the following columns: k, student, rubric, bound.  Student and rubric identifiers for the student and rubric items.  Bound is maximum bin in the rubric that can be reached.  k is the bin the bin the student reached on a given rubric item. 
+	c : float
+		Confidence level for the confidence intervals.  Defaults to 0.025.
+	rubric : bool
+		Switches the bootstrap to treating the rubric rows as blocks instead of the students.  Defaults to False.  
+	n : int
+		Number of iterations for the bootstrap.  Defaults to 10000.
+	
+	Returns: 
+		Tuple:
+			Rubric Estimates : Pandas DataFrame
+			Student Estimates : Pandas DataFrame
+			Bootstrap CIs : Pandas DataFrame
+			# of Times no solution could be found in the Bootstrap : int
+			Number of Observations : int
+			Number of Parameters : int
+			AIC : float
+			BIC : float
+		
+	"""
 	rubricR, studentR, bootstrapR, countE, obs, param, AIC, BIC  = DisplayResults(dataset, c, rubric, n)
 	rubricR.to_csv('rubric.csv')
 	studentR.to_csv('student.csv')
