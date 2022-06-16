@@ -24,6 +24,10 @@ def solve(dataset):
 		return {
 			'student': pd.DataFrame(studentResults, columns=['Variable', 'Value']),
 			'rubric': pd.DataFrame(questionResults, columns=['Variable', 'Value']),
+			'AIC': 2*(uniqueStudents.size+uniqueQuestion.size)-2*np.log(minValue.fun),
+			'BIC': (uniqueStudents.size+uniqueQuestion.size)*np.log(len(studentCode))-2*np.log(minValue.fun),
+			'n': len(studentCode),
+			'NumberOfParameters': (uniqueStudents.size+uniqueQuestion.size)
 		}
 	else:
 		return None
@@ -73,10 +77,6 @@ def bootstrap(dataset, n, rubric=False):
 	}
 
 def getResults(dataset,c=0.025, rubric=False, n=10000):
-	# dataset
-	# [
-	# 	[k, student, rubric, bound],
-	# ]
 	dataset.dropna(inplace=True)
 	if set(['k','bound', 'student', 'rubric']).issubset(df.columns) is False:
 		raise Exception('Invalid pandas dataset, missing columns. k, bound, student, and rubric are required.')
@@ -93,5 +93,21 @@ def getResults(dataset,c=0.025, rubric=False, n=10000):
 				'Variable': var,
 				'Confidence Interval': ci,
 			})
-		return (estimates['rubric'], estimates['student'], pd.DataFrame(l), r['nones'])
-	return None
+		return (estimates['rubric'], estimates['student'], pd.DataFrame(l), r['nones'], estimates['n'], estimates['NumberOfParameters'], estimates['AIC'], estimates['BIC'])
+	else:
+		raise Exception('Could not find estimates.')
+
+def DisplayResults(dataset,c=0.025, rubric=False, n=10000):
+	rubricR, studentR, bootstrapR, countE, obs, param, AIC, BIC  = getResults(dataset, c, rubric, n)
+	print('Rubric Estimates:')
+	print(rubricR)
+	print('Student Estimates:')
+	print(studentR)
+	print('Bootstrap Results:')
+	print(bootstrapR)
+	if countE > 0:
+		print('Warning: ' + str(countE) + ' of ' + str(n) + ' bootstrap samples were empty.')
+	print('Number of Observations:', str(obs))
+	print('Number of Parameters:', str(param))
+	print('AIC:', str(AIC))
+	print('BIC:', str(BIC))
