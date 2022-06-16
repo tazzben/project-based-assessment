@@ -77,7 +77,9 @@ def getResults(dataset,c=0.025, rubric=False, n=10000):
 	# [
 	# 	[k, student, rubric, bound],
 	# ]
-	dataset.dropna()
+	dataset.dropna(inplace=True)
+	dataset = dataset[dataset.k.apply(lambda x: x.isnumeric())]
+	dataset = dataset[dataset.bound.apply(lambda x: x.isnumeric())]
 	estimates = solve(dataset)
 	if estimates is not None:
 		r = bootstrap(dataset, n, rubric)
