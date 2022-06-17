@@ -17,7 +17,7 @@ setup(
     'Development Status :: 3 - Alpha', 
     'Intended Audience :: Science/Research', 
     'License :: OSI Approved :: MIT License',  
-    'Programming Language :: Python :: 3.8',
+    'Programming Language :: Python :: 3.9',
     ],
     keywords = ['Assessment', 'Projects', 'Statistics', 'Education', 'Bootstrap'],
     url = 'https://github.com/tazzben/project-based-assessment',
