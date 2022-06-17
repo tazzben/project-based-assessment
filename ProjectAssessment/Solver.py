@@ -103,9 +103,17 @@ def getResults(dataset,c=0.025, rubric=False, n=10000):
 			BIC : float
 
 	"""
-	dataset.dropna(inplace=True)
-	if set(['k','bound', 'student', 'rubric']).issubset(df.columns) is False:
+	if not isinstance(dataset, pd.DataFrame):
+		raise Exception('dataset must be a Pandas DataFrame')
+	if not set(['k','bound', 'student', 'rubric']).issubset(dataset.columns):
 		raise Exception('Invalid pandas dataset, missing columns. k, bound, student, and rubric are required.')
+	if not isinstance(c, float) and c > 0 and c < 1:
+		raise Exception('c must be a float between 0 and 1')
+	if not isinstance(rubric, bool):
+		raise Exception('rubric must be a boolean')
+	if not isinstance(n, int) and n > 0:
+		raise Exception('n must be an integer greater than 0')
+	dataset.dropna(inplace=True)
 	dataset = dataset[dataset.k.apply(lambda x: x.isnumeric())]
 	dataset = dataset[dataset.bound.apply(lambda x: x.isnumeric())]
 	estimates = solve(dataset)
