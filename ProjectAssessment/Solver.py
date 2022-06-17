@@ -1,6 +1,8 @@
+from lib2to3.refactor import MultiprocessRefactoringTool
 import pandas as pd
 import numpy as np
 from scipy.optimize import minimize
+from scipy import stats
 from multiprocessing import Pool
 from progress.bar import Bar
 
@@ -10,7 +12,10 @@ def itemPb(q, s, k, b):
 def opFunction(x, data):
 	return -1.0 * (np.array([ itemPb(x[item[1]], x[item[2]], item[0], item[3]) for item in data ]).prod())
 
-def solve(dataset):
+def opRestricted (x, data):
+	return -1.0 * (np.array([ itemPb(x[0], 0, item[0], item[3]) for item in data ]).prod())
+
+def solve(dataset, summary = True):
 	studentCode, uniqueStudents = pd.factorize(dataset['student'])
 	questionCode, uniqueQuestion = pd.factorize(dataset['rubric'])
 	questionCode = questionCode + uniqueStudents.size
@@ -21,14 +26,20 @@ def solve(dataset):
 		fullResults = list(zip(map, minValue.x))
 		studentResults = fullResults[:uniqueStudents.size]
 		questionResults = fullResults[uniqueStudents.size:]
-		return {
+		d = {
 			'student': pd.DataFrame(studentResults, columns=['Variable', 'Value']),
 			'rubric': pd.DataFrame(questionResults, columns=['Variable', 'Value']),
-			'AIC': 2*(uniqueStudents.size+uniqueQuestion.size)-2*np.log(minValue.fun),
-			'BIC': (uniqueStudents.size+uniqueQuestion.size)*np.log(len(studentCode))-2*np.log(minValue.fun),
-			'n': len(studentCode),
-			'NumberOfParameters': (uniqueStudents.size+uniqueQuestion.size)
 		}
+		if not summary:
+			return d
+		d['AIC'] = 2*(uniqueStudents.size+uniqueQuestion.size)-2*np.log(minValue.fun)
+		d['BIC'] = (uniqueStudents.size+uniqueQuestion.size)*np.log(len(studentCode))-2*np.log(minValue.fun)
+		d['n'] = len(studentCode)
+		d['NumberOfParameters'] = uniqueStudents.size+uniqueQuestion.size
+		minRestricted = minimize(opRestricted, [0,], args=(data, ), method='Powell')
+		if (minRestricted.success):
+			d['McFadden'] = 1 - (np.log(minValue.fun)/np.log(minRestricted.fun))
+		return d
 	else:
 		return None
 
@@ -42,7 +53,7 @@ def bootstrapRow (dataset, rubric=False):
 		rows[key] = c
 		l.append(rows)
 	resultData = pd.concat(l, ignore_index=True)
-	return solve(resultData)
+	return solve(resultData, False)
 
 def CallRow(row):
 	key = 'student' if row['rubric'] else 'rubric'
@@ -95,12 +106,13 @@ def getResults(dataset,c=0.025, rubric=False, n=10000):
 		Tuple:
 			Rubric Estimates : Pandas DataFrame
 			Student Estimates : Pandas DataFrame
-			Bootstrap CIs : Pandas DataFrame
+			Bootstrap CIs and P-Values : Pandas DataFrame
 			# of Times no solution could be found in the Bootstrap : int
 			Number of Observations : int
 			Number of Parameters : int
 			AIC : float
 			BIC : float
+			McFadden R^2 : float
 
 	"""
 	if not isinstance(dataset, pd.DataFrame):
@@ -123,11 +135,16 @@ def getResults(dataset,c=0.025, rubric=False, n=10000):
 		for var in r['Variable'].unique():
 			df = r[r['Variable'] == var]['Value']
 			ci = (df.quantile(q=c), df.quantile(q=(1-c)))
+			pvalue = (stats.percentileofscore(df, 0) / 100)*2 if np.mean(df) > 0 else (1 - (stats.percentileofscore(df, 0) / 100))*2
 			l.append({
 				'Variable': var,
 				'Confidence Interval': ci,
+				'P-Value': pvalue,
 			})
-		return (estimates['rubric'], estimates['student'], pd.DataFrame(l), r['nones'], estimates['n'], estimates['NumberOfParameters'], estimates['AIC'], estimates['BIC'])
+		McFadden = None
+		if "McFadden" in estimates:
+			McFadden = estimates["McFadden"]
+		return (estimates['rubric'], estimates['student'], pd.DataFrame(l), r['nones'], estimates['n'], estimates['NumberOfParameters'], estimates['AIC'], estimates['BIC'], McFadden)
 	else:
 		raise Exception('Could not find estimates.')
 
@@ -150,15 +167,16 @@ def DisplayResults(dataset,c=0.025, rubric=False, n=10000):
 		Tuple:
 			Rubric Estimates : Pandas DataFrame
 			Student Estimates : Pandas DataFrame
-			Bootstrap CIs : Pandas DataFrame
+			Bootstrap CIs and P-Values : Pandas DataFrame
 			# of Times no solution could be found in the Bootstrap : int
 			Number of Observations : int
 			Number of Parameters : int
 			AIC : float
 			BIC : float
+			McFadden R^2 : float
 		
 	"""
-	rubricR, studentR, bootstrapR, countE, obs, param, AIC, BIC  = getResults(dataset, c, rubric, n)
+	rubricR, studentR, bootstrapR, countE, obs, param, AIC, BIC, McFadden  = getResults(dataset, c, rubric, n)
 	print('Rubric Estimates:')
 	print(rubricR)
 	print('Student Estimates:')
@@ -167,11 +185,15 @@ def DisplayResults(dataset,c=0.025, rubric=False, n=10000):
 	print(bootstrapR)
 	if countE > 0:
 		print('Warning: ' + str(countE) + ' of ' + str(n) + ' bootstrap samples were empty.')
-	print('Number of Observations:', str(obs))
-	print('Number of Parameters:', str(param))
-	print('AIC:', str(AIC))
-	print('BIC:', str(BIC))
-	return (rubricR, studentR, bootstrapR, countE, obs, param, AIC, BIC)
+	print('Number of Observations:', obs)
+	print('Number of Parameters:', param)
+	print('AIC:', AIC)
+	print('BIC:', BIC)
+	if McFadden is not None:
+		print('McFadden R^2:', McFadden)
+	else:
+		print('Warning: McFadden R^2 could not be because the restricted model could not be solved.')	
+	return (rubricR, studentR, bootstrapR, countE, obs, param, AIC, BIC, McFadden)
 
 def SaveResults(dataset,c=0.025, rubric=False, n=10000):
 	"""
@@ -192,15 +214,16 @@ def SaveResults(dataset,c=0.025, rubric=False, n=10000):
 		Tuple:
 			Rubric Estimates : Pandas DataFrame
 			Student Estimates : Pandas DataFrame
-			Bootstrap CIs : Pandas DataFrame
+			Bootstrap CIs and P-Values : Pandas DataFrame
 			# of Times no solution could be found in the Bootstrap : int
 			Number of Observations : int
 			Number of Parameters : int
 			AIC : float
 			BIC : float
+			McFadden R^2 : float
 		
 	"""
-	rubricR, studentR, bootstrapR, countE, obs, param, AIC, BIC  = DisplayResults(dataset, c, rubric, n)
+	rubricR, studentR, bootstrapR, countE, obs, param, AIC, BIC, McFadden  = DisplayResults(dataset, c, rubric, n)
 	rubricR.to_csv('rubric.csv')
 	studentR.to_csv('student.csv')
 	bootstrapR.to_csv('bootstrap.csv')
@@ -209,6 +232,7 @@ def SaveResults(dataset,c=0.025, rubric=False, n=10000):
 		'Number of Parameters': param,
 		'AIC': AIC,
 		'BIC': BIC,
+		'McFadden R^2': McFadden,
 	}
 	pd.DataFrame.from_dict(output, orient='index').to_csv('output.csv')
-	return (rubricR, studentR, bootstrapR, countE, obs, param, AIC, BIC)
+	return (rubricR, studentR, bootstrapR, countE, obs, param, AIC, BIC, McFadden)
