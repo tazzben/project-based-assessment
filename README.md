@@ -1,6 +1,6 @@
 # Project Based Assessment 
 
-The project based assessment library allows the practitioner to estimate difficulty and ability parameters in using data from rubrics. 
+The project based assessment library allows the practitioner to estimate difficulty and ability parameters when using data from rubric rows. 
 
 The library contains the following methods:
 
@@ -29,6 +29,6 @@ All methods return the following:
 8. Bayesian information criterion
 9. McFadden pseudo-R^2
 10. Likelihood Ratio test statistic
-11. Chi-Squared P-Value of the model (i.e. Wilk's test)
+11. Chi-Squared P-Value of the model (i.e. Wilks' theorem)
 
 getResults only return these values as a tuple.  DisplayResults returns the values as a tuple and prints the results to screen.  SaveResults returns the values as a tuple, displays the results and saves the results to CSV files.
