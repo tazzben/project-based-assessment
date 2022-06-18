@@ -2,6 +2,7 @@ import pandas as pd
 import numpy as np
 from scipy.optimize import minimize
 from scipy import stats
+from scipy.stats.distributions import chi2
 from multiprocessing import Pool
 from progress.bar import Bar
 
@@ -38,6 +39,8 @@ def solve(dataset, summary = True):
 		minRestricted = minimize(opRestricted, [0,], args=(data, ), method='Powell')
 		if (minRestricted.success):
 			d['McFadden'] = 1 - (np.log(minValue.fun)/np.log(minRestricted.fun))
+			d['LR'] = -2*np.log(minRestricted.fun/minValue.fun)
+			d['Chi-Squared'] = chi2.sf(d['LR'], (uniqueStudents.size+uniqueQuestion.size-1))
 		return d
 	else:
 		return None
@@ -112,6 +115,8 @@ def getResults(dataset,c=0.025, rubric=False, n=10000):
 			AIC : float
 			BIC : float
 			McFadden R^2 : float
+			Likelihood Ratio Test Statistic of the model : float
+			Chi-Squared P-Value of the model : float
 
 	"""
 	if not isinstance(dataset, pd.DataFrame):
@@ -141,9 +146,13 @@ def getResults(dataset,c=0.025, rubric=False, n=10000):
 				'P-Value': pvalue,
 			})
 		McFadden = None
+		LR = None
+		ChiSquared = None
 		if "McFadden" in estimates:
 			McFadden = estimates["McFadden"]
-		return (estimates['rubric'], estimates['student'], pd.DataFrame(l), r['nones'], estimates['n'], estimates['NumberOfParameters'], estimates['AIC'], estimates['BIC'], McFadden)
+			LR = estimates["LR"]
+			ChiSquared = estimates["Chi-Squared"]
+		return (estimates['rubric'], estimates['student'], pd.DataFrame(l), r['nones'], estimates['n'], estimates['NumberOfParameters'], estimates['AIC'], estimates['BIC'], McFadden, LR, ChiSquared)
 	else:
 		raise Exception('Could not find estimates.')
 
@@ -173,9 +182,11 @@ def DisplayResults(dataset,c=0.025, rubric=False, n=10000):
 			AIC : float
 			BIC : float
 			McFadden R^2 : float
+			Likelihood Ratio Test Statistic of the model : float
+			Chi-Squared P-Value of the model : float
 		
 	"""
-	rubricR, studentR, bootstrapR, countE, obs, param, AIC, BIC, McFadden  = getResults(dataset, c, rubric, n)
+	rubricR, studentR, bootstrapR, countE, obs, param, AIC, BIC, McFadden, LR, ChiSquared = getResults(dataset, c, rubric, n)
 	print('Rubric Estimates:')
 	print(rubricR)
 	print('Student Estimates:')
@@ -190,9 +201,11 @@ def DisplayResults(dataset,c=0.025, rubric=False, n=10000):
 	print('BIC:', BIC)
 	if McFadden is not None:
 		print('McFadden R^2:', McFadden)
+		print('Likelihood Ratio Test Statistic:', LR)
+		print('Chi-Squared LR Test P-Value:', ChiSquared)
 	else:
-		print('Warning: McFadden R^2 could not be because the restricted model could not be solved.')	
-	return (rubricR, studentR, bootstrapR, countE, obs, param, AIC, BIC, McFadden)
+		print('Warning: McFadden R^2, Likelihood Ratio Test, and Chi-Squared LR Test could not be displayed because the restricted model could not be solved.')	
+	return (rubricR, studentR, bootstrapR, countE, obs, param, AIC, BIC, McFadden, LR, ChiSquared)
 
 def SaveResults(dataset,c=0.025, rubric=False, n=10000):
 	"""
@@ -220,9 +233,11 @@ def SaveResults(dataset,c=0.025, rubric=False, n=10000):
 			AIC : float
 			BIC : float
 			McFadden R^2 : float
+			Likelihood Ratio Test Statistic of the model : float
+			Chi-Squared P-Value of the model : float
 		
 	"""
-	rubricR, studentR, bootstrapR, countE, obs, param, AIC, BIC, McFadden  = DisplayResults(dataset, c, rubric, n)
+	rubricR, studentR, bootstrapR, countE, obs, param, AIC, BIC, McFadden, LR, ChiSquared  = DisplayResults(dataset, c, rubric, n)
 	rubricR.to_csv('rubric.csv')
 	studentR.to_csv('student.csv')
 	bootstrapR.to_csv('bootstrap.csv')
@@ -232,6 +247,8 @@ def SaveResults(dataset,c=0.025, rubric=False, n=10000):
 		'AIC': AIC,
 		'BIC': BIC,
 		'McFadden R^2': McFadden,
+		'Likelihood Ratio Test Statistic': LR,
+		'Chi-Squared LR Test P-Value': ChiSquared,
 	}
 	pd.DataFrame.from_dict(output, orient='index').to_csv('output.csv')
-	return (rubricR, studentR, bootstrapR, countE, obs, param, AIC, BIC, McFadden)
+	return (rubricR, studentR, bootstrapR, countE, obs, param, AIC, BIC, McFadden, LR, ChiSquared)
