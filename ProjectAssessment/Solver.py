@@ -20,8 +20,8 @@ def solve(dataset, summary = True):
 	questionCode, uniqueQuestion = pd.factorize(dataset['rubric'])
 	questionCode = questionCode + uniqueStudents.size
 	map = np.concatenate((uniqueStudents, uniqueQuestion), axis=None).tolist()
-	data = list(zip(dataset['k'], studentCode, questionCode, dataset['bound']))
-	minValue = minimize(opFunction, [0]*len(map), args=(data, ), method='Powell')
+	data = list(zip(dataset['k'].to_numpy().flatten().tolist(), studentCode.tolist(), questionCode.tolist(), dataset['bound'].to_numpy().flatten().tolist()))
+	minValue = minimize(opFunction, [1/(2*(1+dataset['k'].mean().to_numpy().flatten().item()))]*len(map), args=(data, ), method='Powell')
 	if (minValue.success):
 		fullResults = list(zip(map, minValue.x))
 		studentResults = fullResults[:uniqueStudents.size]
@@ -36,7 +36,7 @@ def solve(dataset, summary = True):
 		d['BIC'] = (uniqueStudents.size+uniqueQuestion.size)*np.log(len(studentCode))-2*np.log(minValue.fun)
 		d['n'] = len(studentCode)
 		d['NumberOfParameters'] = uniqueStudents.size+uniqueQuestion.size
-		minRestricted = minimize(opRestricted, [0,], args=(data, ), method='Powell')
+		minRestricted = minimize(opRestricted, [1/(1+dataset['k'].mean().to_numpy().flatten().item()),], args=(data, ), method='Powell')
 		if (minRestricted.success):
 			d['McFadden'] = 1 - (np.log(minValue.fun)/np.log(minRestricted.fun))
 			d['LR'] = -2*np.log(minRestricted.fun/minValue.fun)
@@ -47,7 +47,7 @@ def solve(dataset, summary = True):
 
 def bootstrapRow (dataset, rubric=False):
 	key = 'rubric' if rubric else 'student'
-	ids = dataset[key].unique()
+	ids = dataset[key].unique().to_numpy().flatten().tolist()
 	randomGroupIds = np.random.choice(ids, size=len(ids), replace=True)
 	l = []
 	for c, i in enumerate(randomGroupIds):
