@@ -23,7 +23,7 @@ def solve(dataset, summary = True):
 	data = list(zip(dataset['k'].to_numpy().flatten().tolist(), studentCode.tolist(), questionCode.tolist(), dataset['bound'].to_numpy().flatten().tolist()))
 	minValue = minimize(opFunction, [1/(2*(1+dataset['k'].mean().to_numpy().flatten().item()))]*len(map), args=(data, ), method='Powell')
 	if (minValue.success):
-		fullResults = list(zip(map, minValue.x))
+		fullResults = list(zip(map, minValue.x.flatten().tolist()))
 		studentResults = fullResults[:uniqueStudents.size]
 		questionResults = fullResults[uniqueStudents.size:]
 		d = {
@@ -130,8 +130,8 @@ def getResults(dataset,c=0.025, rubric=False, n=10000):
 	if not isinstance(n, int) and n > 0:
 		raise Exception('n must be an integer greater than 0')
 	dataset.dropna(inplace=True)
-	dataset = dataset[dataset.k.apply(lambda x: x.isnumeric())]
-	dataset = dataset[dataset.bound.apply(lambda x: x.isnumeric())]
+	dataset = dataset[pd.to_numeric(dataset['k'], errors='coerce').notnull()]
+	dataset = dataset[pd.to_numeric(dataset['bound'], errors='coerce').notnull()]
 	if not len(dataset.index) > 0:
 		raise Exception('Invalid pandas dataset, empty dataset.')
 	estimates = solve(dataset)
