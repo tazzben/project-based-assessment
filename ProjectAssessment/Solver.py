@@ -122,9 +122,9 @@ def getResults(dataset,c=0.025, rubric=False, n=10000):
 	if not isinstance(dataset, pd.DataFrame):
 		raise Exception('dataset must be a Pandas DataFrame')
 	if not set(['k','bound', 'student', 'rubric']).issubset(dataset.columns):
-		raise Exception('Invalid pandas dataset, missing columns. k, bound, student, and rubric are required.')
-	if not isinstance(c, float) and c > 0 and c < 1:
-		raise Exception('c must be a float between 0 and 1')
+		raise Exception('Invalid pandas dataset, missing columns. k, bound, student, and rubric are required.')	
+	if not isinstance(c, float) and c >= 0 and c <= 0.5:
+		raise Exception('c must be a float between 0 and 0.5')
 	if not isinstance(rubric, bool):
 		raise Exception('rubric must be a boolean')
 	if not isinstance(n, int) and n > 0:
@@ -132,6 +132,8 @@ def getResults(dataset,c=0.025, rubric=False, n=10000):
 	dataset.dropna(inplace=True)
 	dataset = dataset[dataset.k.apply(lambda x: x.isnumeric())]
 	dataset = dataset[dataset.bound.apply(lambda x: x.isnumeric())]
+	if not len(dataset.index) > 0:
+		raise Exception('Invalid pandas dataset, empty dataset.')
 	estimates = solve(dataset)
 	if estimates is not None:
 		r = bootstrap(dataset, n, rubric)
@@ -207,9 +209,9 @@ def DisplayResults(dataset,c=0.025, rubric=False, n=10000):
 		print('Warning: McFadden R^2, Likelihood Ratio Test, and Chi-Squared LR Test could not be displayed because the restricted model could not be solved.')	
 	return (rubricR, studentR, bootstrapR, countE, obs, param, AIC, BIC, McFadden, LR, ChiSquared)
 
-def SaveResults(dataset,c=0.025, rubric=False, n=10000):
+def SaveResults(dataset,c=0.025, rubric=False, n=10000, rubricFile = 'rubric.csv', studentFile = 'student.csv', bootstrapFile = 'bootstrap.csv'):
 	"""
-	Estimates the parameters of the model and produces confidence intervals for the estimates using a bootstrap method. Results are printed out to the console and results are saved to CSV files.
+	Estimates the parameters of the model and produces confidence intervals for the estimates using a bootstrap method. Results are printed out to the console and saved to CSV files.
 	
 	Parameters:
 	-----------
@@ -221,6 +223,12 @@ def SaveResults(dataset,c=0.025, rubric=False, n=10000):
 		Switches the bootstrap to treating the rubric rows as blocks instead of the students.  Defaults to False.  
 	n : int
 		Number of iterations for the bootstrap.  Defaults to 10000.
+	rubricFile : str
+		File name/path for the rubric results.  Defaults to 'rubric.csv'.
+	studentFile : str
+		File name/path for the student results.  Defaults to 'student.csv'.
+	bootstrapFile : str
+		File name/path for the bootstrap results.  Defaults to 'bootstrap.csv'.
 	
 	Returns: 
 		Tuple:
@@ -238,9 +246,9 @@ def SaveResults(dataset,c=0.025, rubric=False, n=10000):
 		
 	"""
 	rubricR, studentR, bootstrapR, countE, obs, param, AIC, BIC, McFadden, LR, ChiSquared  = DisplayResults(dataset, c, rubric, n)
-	rubricR.to_csv('rubric.csv')
-	studentR.to_csv('student.csv')
-	bootstrapR.to_csv('bootstrap.csv')
+	rubricR.to_csv(rubricFile)
+	studentR.to_csv(studentFile)
+	bootstrapR.to_csv(bootstrapFile)
 	output = {
 		'Number of Observations': obs,
 		'Number of Parameters': param,
