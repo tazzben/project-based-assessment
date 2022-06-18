@@ -1,5 +1,6 @@
 import pandas as pd
 import numpy as np
+import math
 from scipy.optimize import minimize
 from scipy import stats
 from scipy.stats.distributions import chi2
@@ -7,7 +8,7 @@ from multiprocessing import Pool
 from progress.bar import Bar
 
 def itemPb(q, s, k, b):
-	return (1 - q - s)^(np.floor(k)) * (q + s + (q + s - 1) * np.ceil(-k/b))
+	return (1 - q - s)**(math.floor(k)) * (q + s + (q + s - 1) * math.ceil(-k/b))
 
 def opFunction(x, data):
 	return -1.0 * (np.array([ itemPb(x[item[1]], x[item[2]], item[0], item[3]) for item in data ]).prod())
@@ -21,7 +22,8 @@ def solve(dataset, summary = True):
 	questionCode = questionCode + uniqueStudents.size
 	map = np.concatenate((uniqueStudents, uniqueQuestion), axis=None).tolist()
 	data = list(zip(dataset['k'].to_numpy().flatten().tolist(), studentCode.tolist(), questionCode.tolist(), dataset['bound'].to_numpy().flatten().tolist()))
-	minValue = minimize(opFunction, [1/(2*(1+dataset['k'].mean().to_numpy().flatten().item()))]*len(map), args=(data, ), method='Powell')
+	bounds = [(0, 1)]*len(map)
+	minValue = minimize(opFunction, [1/(2*(1+dataset['k'].mean()))]*len(map), args=(data, ), bounds=bounds, method='Powell')
 	if (minValue.success):
 		fullResults = list(zip(map, minValue.x.flatten().tolist()))
 		studentResults = fullResults[:uniqueStudents.size]
@@ -32,27 +34,27 @@ def solve(dataset, summary = True):
 		}
 		if not summary:
 			return d
-		d['AIC'] = 2*(uniqueStudents.size+uniqueQuestion.size)-2*np.log(minValue.fun)
-		d['BIC'] = (uniqueStudents.size+uniqueQuestion.size)*np.log(len(studentCode))-2*np.log(minValue.fun)
+		d['AIC'] = 2*(uniqueStudents.size+uniqueQuestion.size)-2*math.log(-1*minValue.fun)
+		d['BIC'] = (uniqueStudents.size+uniqueQuestion.size)*math.log(len(studentCode))-2*math.log(-1*minValue.fun)
 		d['n'] = len(studentCode)
 		d['NumberOfParameters'] = uniqueStudents.size+uniqueQuestion.size
-		minRestricted = minimize(opRestricted, [1/(1+dataset['k'].mean().to_numpy().flatten().item()),], args=(data, ), method='Powell')
+		minRestricted = minimize(opRestricted, [1/(1+dataset['k'].mean()),], args=(data, ), bounds=[(0, 1),], method='Powell')
 		if (minRestricted.success):
-			d['McFadden'] = 1 - (np.log(minValue.fun)/np.log(minRestricted.fun))
-			d['LR'] = -2*np.log(minRestricted.fun/minValue.fun)
+			d['McFadden'] = 1 - (math.log(-1*minValue.fun)/math.log(-1*minRestricted.fun))
+			d['LR'] = -2*math.log(minRestricted.fun/minValue.fun)
 			d['Chi-Squared'] = chi2.sf(d['LR'], (uniqueStudents.size+uniqueQuestion.size-1))
 		return d
 	else:
-		return None
+		raise Exception(minValue.message)
 
 def bootstrapRow (dataset, rubric=False):
 	key = 'rubric' if rubric else 'student'
-	ids = dataset[key].unique().to_numpy().flatten().tolist()
+	ids = dataset[key].unique().flatten().tolist()
 	randomGroupIds = np.random.choice(ids, size=len(ids), replace=True)
 	l = []
 	for c, i in enumerate(randomGroupIds):
 		rows = dataset[dataset[key]==i]
-		rows[key] = c
+		rows.assign(rubric=c) if rubric else rows.assign(student=c)
 		l.append(rows)
 	resultData = pd.concat(l, ignore_index=True)
 	return solve(resultData, False)
@@ -89,7 +91,7 @@ def bootstrap(dataset, n, rubric=False):
 		'nones': len(nones)
 	}
 
-def getResults(dataset,c=0.025, rubric=False, n=10000):
+def getResults(dataset: pd.DataFrame,c=0.025, rubric=False, n=10000):
 	"""
 	Estimates the parameters of the model and produces confidence intervals for the estimates using a bootstrap method. 
 	
@@ -136,7 +138,8 @@ def getResults(dataset,c=0.025, rubric=False, n=10000):
 		raise Exception('Invalid pandas dataset, empty dataset.')
 	estimates = solve(dataset)
 	if estimates is not None:
-		r = bootstrap(dataset, n, rubric)
+		results = bootstrap(dataset, n, rubric)
+		r = results['results']
 		l = []
 		for var in r['Variable'].unique():
 			df = r[r['Variable'] == var]['Value']
@@ -154,11 +157,11 @@ def getResults(dataset,c=0.025, rubric=False, n=10000):
 			McFadden = estimates["McFadden"]
 			LR = estimates["LR"]
 			ChiSquared = estimates["Chi-Squared"]
-		return (estimates['rubric'], estimates['student'], pd.DataFrame(l), r['nones'], estimates['n'], estimates['NumberOfParameters'], estimates['AIC'], estimates['BIC'], McFadden, LR, ChiSquared)
+		return (estimates['rubric'], estimates['student'], pd.DataFrame(l), results['nones'], estimates['n'], estimates['NumberOfParameters'], estimates['AIC'], estimates['BIC'], McFadden, LR, ChiSquared)
 	else:
 		raise Exception('Could not find estimates.')
 
-def DisplayResults(dataset,c=0.025, rubric=False, n=10000):
+def DisplayResults(dataset: pd.DataFrame,c=0.025, rubric=False, n=10000):
 	"""
 	Estimates the parameters of the model and produces confidence intervals for the estimates using a bootstrap method. Results are printed out to the console.
 	
@@ -209,7 +212,7 @@ def DisplayResults(dataset,c=0.025, rubric=False, n=10000):
 		print('Warning: McFadden R^2, Likelihood Ratio Test, and Chi-Squared LR Test could not be displayed because the restricted model could not be solved.')	
 	return (rubricR, studentR, bootstrapR, countE, obs, param, AIC, BIC, McFadden, LR, ChiSquared)
 
-def SaveResults(dataset,c=0.025, rubric=False, n=10000, rubricFile = 'rubric.csv', studentFile = 'student.csv', bootstrapFile = 'bootstrap.csv'):
+def SaveResults(dataset: pd.DataFrame,c=0.025, rubric=False, n=10000, rubricFile = 'rubric.csv', studentFile = 'student.csv', bootstrapFile = 'bootstrap.csv'):
 	"""
 	Estimates the parameters of the model and produces confidence intervals for the estimates using a bootstrap method. Results are printed out to the console and saved to CSV files.
 	
