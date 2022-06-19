@@ -10,6 +10,7 @@ setup(
         'pandas',
         'progress',
         'scipy',
+        'prettytable',
     ],
     author='Ben Smith',
     author_email='bosmith@unomaha.edu',

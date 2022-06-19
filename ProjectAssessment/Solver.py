@@ -6,6 +6,7 @@ from scipy import stats
 from scipy.stats.distributions import chi2
 from multiprocessing import Pool
 from progress.bar import Bar
+from prettytable import PrettyTable
 
 def itemPb(q, s, k, b):
 	return (1 - q - s)**(math.floor(k)) * (q + s + (q + s - 1) * math.ceil(-k/b))
@@ -192,27 +193,41 @@ def DisplayResults(dataset: pd.DataFrame,c=0.025, rubric=False, n=10000):
 		
 	"""
 	rubricR, studentR, bootstrapR, countE, obs, param, AIC, BIC, McFadden, LR, ChiSquared = getResults(dataset, c, rubric, n)
-	print('Rubric Estimates:')
-	print(rubricR)
-	print('Student Estimates:')
-	print(studentR)
-	print('Bootstrap Results:')
-	print(bootstrapR)
-	if countE > 0:
-		print('Warning: ' + str(countE) + ' of ' + str(n) + ' bootstrap samples were empty.')
-	print('Number of Observations:', obs)
-	print('Number of Parameters:', param)
-	print('AIC:', AIC)
-	print('BIC:', BIC)
-	if McFadden is not None:
-		print('McFadden R^2:', McFadden)
-		print('Likelihood Ratio Test Statistic:', LR)
-		print('Chi-Squared LR Test P-Value:', ChiSquared)
+	warnings = []
+	if rubric is True:
+		printedStudent = studentR.merge(bootstrapR, on='Variable', how='inner')
+		printedRubric = rubricR
 	else:
-		print('Warning: McFadden R^2, Likelihood Ratio Test, and Chi-Squared LR Test could not be displayed because the restricted model could not be solved.')	
+		printedRubric = rubricR.merge(bootstrapR, on='Variable', how='inner')
+		printedStudent = studentR
+	print('Rubric Estimates:')
+	print(printedRubric)
+	print('Student Estimates:')
+	print(printedStudent)
+	if countE > 0:
+		warnings.append(str(countE) + ' of ' + str(n) + ' bootstrap samples were empty.')
+	
+	x = PrettyTable(align='r')
+
+	x.field_names = ["", "Value",]
+	x.add_row(["Number of Observations:", obs])
+	x.add_row(["Number of Parameters:", param])
+	x.add_row(["AIC:", AIC])
+	x.add_row(["BIC:", BIC])
+	if McFadden is not None:
+		x.add_row(["McFadden R^2:", McFadden])
+		x.add_row(["Likelihood Ratio Test Statistic:", LR])
+		x.add_row(["Chi-Squared LR P-Value:", ChiSquared])
+	else:
+		warnings.append('McFadden R^2, Likelihood Ratio Test, and Chi-Squared LR Test could not be displayed because the restricted model could not be solved.')
+	print(x)
+	if len(warnings) > 0:
+		print('Warnings:')
+		for warning in warnings:
+			print(warning)	
 	return (rubricR, studentR, bootstrapR, countE, obs, param, AIC, BIC, McFadden, LR, ChiSquared)
 
-def SaveResults(dataset: pd.DataFrame,c=0.025, rubric=False, n=10000, rubricFile = 'rubric.csv', studentFile = 'student.csv', bootstrapFile = 'bootstrap.csv'):
+def SaveResults(dataset: pd.DataFrame,c=0.025, rubric=False, n=10000, rubricFile = 'rubric.csv', studentFile = 'student.csv'):
 	"""
 	Estimates the parameters of the model and produces confidence intervals for the estimates using a bootstrap method. Results are printed out to the console and saved to CSV files.
 	
@@ -230,8 +245,6 @@ def SaveResults(dataset: pd.DataFrame,c=0.025, rubric=False, n=10000, rubricFile
 		File name/path for the rubric results.  Defaults to 'rubric.csv'.
 	studentFile : str
 		File name/path for the student results.  Defaults to 'student.csv'.
-	bootstrapFile : str
-		File name/path for the bootstrap results.  Defaults to 'bootstrap.csv'.
 	
 	Returns: 
 		Tuple:
@@ -249,9 +262,14 @@ def SaveResults(dataset: pd.DataFrame,c=0.025, rubric=False, n=10000, rubricFile
 		
 	"""
 	rubricR, studentR, bootstrapR, countE, obs, param, AIC, BIC, McFadden, LR, ChiSquared  = DisplayResults(dataset, c, rubric, n)
-	rubricR.to_csv(rubricFile)
-	studentR.to_csv(studentFile)
-	bootstrapR.to_csv(bootstrapFile)
+	if rubric is True:
+		printedStudent = studentR.merge(bootstrapR, on='Variable', how='inner')
+		printedRubric = rubricR
+	else:
+		printedRubric = rubricR.merge(bootstrapR, on='Variable', how='inner')
+		printedStudent = studentR
+	printedRubric.to_csv(rubricFile, index=False)
+	printedStudent.to_csv(studentFile, index=False)
 	output = {
 		'Number of Observations': obs,
 		'Number of Parameters': param,
@@ -261,5 +279,5 @@ def SaveResults(dataset: pd.DataFrame,c=0.025, rubric=False, n=10000, rubricFile
 		'Likelihood Ratio Test Statistic': LR,
 		'Chi-Squared LR Test P-Value': ChiSquared,
 	}
-	pd.DataFrame.from_dict(output, orient='index').to_csv('output.csv')
+	pd.DataFrame.from_dict(output, orient='index').to_csv('output.csv', header=False)
 	return (rubricR, studentR, bootstrapR, countE, obs, param, AIC, BIC, McFadden, LR, ChiSquared)

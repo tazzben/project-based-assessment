@@ -15,7 +15,7 @@ getResults and DisplayResults take the following parameters:
 3. A bool flag indicating to treat the rubric rows as blocks instead of the unique students in the bootstrap.  Defaults to False.
 4. The number of iterations in the bootstrap.  Defaults to 10000.
 
-SaveResults takes the same parameters as getResults and DisplayResults but has the additional parameters of: rubricFile, studentFile, bootstrapFile (in that order).  These specify the filenames to save the results.  These default to "rubric.csv", "student.csv", and "bootstrap.csv".
+SaveResults takes the same parameters as getResults and DisplayResults but has the additional parameters of: rubricFile and studentFile (in that order).  These specify the filenames to save the results.  These default to "rubric.csv" and "student.csv".
 
 All methods return the following:
 
