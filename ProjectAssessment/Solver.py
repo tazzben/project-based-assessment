@@ -9,7 +9,7 @@ from progress.bar import Bar
 from prettytable import PrettyTable
 
 def itemPb(q, s, k, b):
-	return (1 - q - s)**(math.floor(k)) * (q + s + (q + s - 1) * math.ceil(-k/b))
+	return (q + s + (q + s - 1) * math.ceil(-k/b)) * (1 - q - s)**(math.floor(k))
 
 def opFunction(x, data):
 	return -1.0 * (np.array([ itemPb(x[item[1]], x[item[2]], item[0], item[3]) for item in data ]).prod())
