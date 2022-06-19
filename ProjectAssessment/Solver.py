@@ -8,8 +8,11 @@ from multiprocessing import Pool
 from progress.bar import Bar
 from prettytable import PrettyTable
 
+def logistic(q, s):
+	return 1/(1+math.exp(-1*(q+s)))
+
 def itemPb(q, s, k, b):
-	return (q + s + (q + s - 1) * math.ceil(-k/b)) * (1 - q - s)**(math.floor(k))
+	return (logistic(q,s) + (logistic(q,s) - 1) * math.ceil(-k/b)) * (1 - logistic(q,s))**(math.floor(k))
 
 def opFunction(x, data):
 	return -1.0 * (np.array([ itemPb(x[item[1]], x[item[2]], item[0], item[3]) for item in data ]).prod())
@@ -21,17 +24,17 @@ def solve(dataset, summary = True):
 	studentCode, uniqueStudents = pd.factorize(dataset['student'])
 	questionCode, uniqueQuestion = pd.factorize(dataset['rubric'])
 	questionCode = questionCode + uniqueStudents.size
-	map = np.concatenate((uniqueStudents, uniqueQuestion), axis=None).tolist()
+	smap = np.concatenate((uniqueStudents, uniqueQuestion), axis=None).tolist()
 	data = list(zip(dataset['k'].to_numpy().flatten().tolist(), studentCode.tolist(), questionCode.tolist(), dataset['bound'].to_numpy().flatten().tolist()))
-	bounds = [(0, 1)]*len(map)
-	minValue = minimize(opFunction, [1/(2*(1+dataset['k'].mean()))]*len(map), args=(data, ), bounds=bounds, method='Powell')
+	minValue = minimize(opFunction, [1/(2*(1+dataset['k'].mean()))]*len(smap), args=(data, ), method='Powell')
 	if (minValue.success):
-		fullResults = list(zip(map, minValue.x.flatten().tolist()))
+		lmap = map(lambda x: logistic(x, 0), minValue.x.flatten().tolist())
+		fullResults = list(zip(smap, minValue.x.flatten().tolist(), lmap))
 		studentResults = fullResults[:uniqueStudents.size]
 		questionResults = fullResults[uniqueStudents.size:]
 		d = {
-			'student': pd.DataFrame(studentResults, columns=['Variable', 'Value']),
-			'rubric': pd.DataFrame(questionResults, columns=['Variable', 'Value']),
+			'student': pd.DataFrame(studentResults, columns=['Variable', 'Value', 'Logistic Transformed Value']),
+			'rubric': pd.DataFrame(questionResults, columns=['Variable', 'Value', 'Logistic Transformed Value'])
 		}
 		if not summary:
 			return d
@@ -39,7 +42,7 @@ def solve(dataset, summary = True):
 		d['BIC'] = (uniqueStudents.size+uniqueQuestion.size)*math.log(len(studentCode))-2*math.log(-1*minValue.fun)
 		d['n'] = len(studentCode)
 		d['NumberOfParameters'] = uniqueStudents.size+uniqueQuestion.size
-		minRestricted = minimize(opRestricted, [1/(1+dataset['k'].mean()),], args=(data, ), bounds=[(0, 1),], method='Powell')
+		minRestricted = minimize(opRestricted, [1/(1+dataset['k'].mean()),], args=(data, ), method='Powell')
 		if (minRestricted.success):
 			d['McFadden'] = 1 - (math.log(-1*minValue.fun)/math.log(-1*minRestricted.fun))
 			d['LR'] = -2*math.log(minRestricted.fun/minValue.fun)
@@ -145,10 +148,12 @@ def getResults(dataset: pd.DataFrame,c=0.025, rubric=False, n=10000):
 		for var in r['Variable'].unique():
 			df = r[r['Variable'] == var]['Value']
 			ci = (df.quantile(q=c), df.quantile(q=(1-c)))
+			transformedci = (logistic(df.quantile(q=c),0), logistic(df.quantile(q=(1-c)),0))
 			pvalue = (stats.percentileofscore(df, 0) / 100)*2 if np.mean(df) > 0 else (1 - (stats.percentileofscore(df, 0) / 100))*2
 			l.append({
 				'Variable': var,
 				'Confidence Interval': ci,
+				'Logistic Transformed Confidence Interval': transformedci,
 				'P-Value': pvalue,
 			})
 		McFadden = None
