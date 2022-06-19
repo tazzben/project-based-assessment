@@ -227,7 +227,7 @@ def DisplayResults(dataset: pd.DataFrame,c=0.025, rubric=False, n=10000):
 			print(warning)	
 	return (rubricR, studentR, bootstrapR, countE, obs, param, AIC, BIC, McFadden, LR, ChiSquared)
 
-def SaveResults(dataset: pd.DataFrame,c=0.025, rubric=False, n=10000, rubricFile = 'rubric.csv', studentFile = 'student.csv'):
+def SaveResults(dataset: pd.DataFrame,c=0.025, rubric=False, n=10000, rubricFile = 'rubric.csv', studentFile = 'student.csv', outputFile = 'output.csv'):
 	"""
 	Estimates the parameters of the model and produces confidence intervals for the estimates using a bootstrap method. Results are printed out to the console and saved to CSV files.
 	
@@ -245,6 +245,8 @@ def SaveResults(dataset: pd.DataFrame,c=0.025, rubric=False, n=10000, rubricFile
 		File name/path for the rubric results.  Defaults to 'rubric.csv'.
 	studentFile : str
 		File name/path for the student results.  Defaults to 'student.csv'.
+	outputFile : str
+		File name/path for the summary output results.  Defaults to 'output.csv'.
 	
 	Returns: 
 		Tuple:
@@ -279,5 +281,5 @@ def SaveResults(dataset: pd.DataFrame,c=0.025, rubric=False, n=10000, rubricFile
 		'Likelihood Ratio Test Statistic': LR,
 		'Chi-Squared LR Test P-Value': ChiSquared,
 	}
-	pd.DataFrame.from_dict(output, orient='index').to_csv('output.csv', header=False)
+	pd.DataFrame.from_dict(output, orient='index').to_csv(outputFile, header=False)
 	return (rubricR, studentR, bootstrapR, countE, obs, param, AIC, BIC, McFadden, LR, ChiSquared)
