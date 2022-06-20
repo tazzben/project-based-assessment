@@ -8,7 +8,6 @@ from scipy.special import expit, xlog1py
 from multiprocessing import Pool
 from progress.bar import Bar
 from prettytable import PrettyTable
-from sqlalchemy import false
 
 def logistic(q, s):
 	return expit(q+s)
