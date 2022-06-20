@@ -4,21 +4,24 @@ import math
 from scipy.optimize import minimize
 from scipy import stats
 from scipy.stats.distributions import chi2
+from scipy.special import expit, xlog1py
 from multiprocessing import Pool
 from progress.bar import Bar
 from prettytable import PrettyTable
 
 def logistic(q, s):
-	return 1/(1+math.exp(-1*(q+s)))
+	return expit(q+s)
 
 def itemPb(q, s, k, b):
-	return (logistic(q,s) + (logistic(q,s) - 1) * math.ceil(-k/b)) * (1 - logistic(q,s))**(math.floor(k))
+	return np.log(logistic(q,s) + (logistic(q,s) - 1) * np.ceil(-k/b)) + xlog1py(np.floor(k), -1*logistic(q,s)) 
 
 def opFunction(x, data):
-	return -1.0 * (np.array([ itemPb(x[item[1]], x[item[2]], item[0], item[3]) for item in data ]).prod())
+	array = np.array([ itemPb(x[item[1]], x[item[2]], item[0], item[3]) for item in data ])
+	return -1.0 * (array.sum())
 
 def opRestricted (x, data):
-	return -1.0 * (np.array([ itemPb(x[0], 0, item[0], item[3]) for item in data ]).prod())
+	array = np.array([ itemPb(x[0], 0, item[0], item[3]) for item in data ])
+	return -1.0 * (array.sum())
 
 def solve(dataset, summary = True):
 	studentCode, uniqueStudents = pd.factorize(dataset['student'])
@@ -38,14 +41,14 @@ def solve(dataset, summary = True):
 		}
 		if not summary:
 			return d
-		d['AIC'] = 2*(uniqueStudents.size+uniqueQuestion.size)-2*math.log(-1*minValue.fun)
-		d['BIC'] = (uniqueStudents.size+uniqueQuestion.size)*math.log(len(studentCode))-2*math.log(-1*minValue.fun)
+		d['AIC'] = 2*(uniqueStudents.size+uniqueQuestion.size)+2*minValue.fun
+		d['BIC'] = (uniqueStudents.size+uniqueQuestion.size)*math.log(len(studentCode))+2*minValue.fun
 		d['n'] = len(studentCode)
 		d['NumberOfParameters'] = uniqueStudents.size+uniqueQuestion.size
 		minRestricted = minimize(opRestricted, [1/(1+dataset['k'].mean()),], args=(data, ), method='Powell')
 		if (minRestricted.success):
-			d['McFadden'] = 1 - (math.log(-1*minValue.fun)/math.log(-1*minRestricted.fun))
-			d['LR'] = -2*math.log(minRestricted.fun/minValue.fun)
+			d['McFadden'] = 1 - minValue.fun/minRestricted.fun
+			d['LR'] = -2*math.log(math.exp(-1*minRestricted.fun+minValue.fun))
 			d['Chi-Squared'] = chi2.sf(d['LR'], (uniqueStudents.size+uniqueQuestion.size-1))
 		return d
 	else:
@@ -95,7 +98,7 @@ def bootstrap(dataset, n, rubric=False):
 		'nones': len(nones)
 	}
 
-def getResults(dataset: pd.DataFrame,c=0.025, rubric=False, n=10000):
+def getResults(dataset: pd.DataFrame,c=0.025, rubric=False, n=1000):
 	"""
 	Estimates the parameters of the model and produces confidence intervals for the estimates using a bootstrap method. 
 	
@@ -108,7 +111,7 @@ def getResults(dataset: pd.DataFrame,c=0.025, rubric=False, n=10000):
 	rubric : bool
 		Switches the bootstrap to treating the rubric rows as blocks instead of the students.  Defaults to False.  
 	n : int
-		Number of iterations for the bootstrap.  Defaults to 10000.
+		Number of iterations for the bootstrap.  Defaults to 1000.
 	
 	Returns: 
 		Tuple:
@@ -168,7 +171,7 @@ def getResults(dataset: pd.DataFrame,c=0.025, rubric=False, n=10000):
 	else:
 		raise Exception('Could not find estimates.')
 
-def DisplayResults(dataset: pd.DataFrame,c=0.025, rubric=False, n=10000):
+def DisplayResults(dataset: pd.DataFrame,c=0.025, rubric=False, n=1000):
 	"""
 	Estimates the parameters of the model and produces confidence intervals for the estimates using a bootstrap method. Results are printed out to the console.
 	
@@ -181,7 +184,7 @@ def DisplayResults(dataset: pd.DataFrame,c=0.025, rubric=False, n=10000):
 	rubric : bool
 		Switches the bootstrap to treating the rubric rows as blocks instead of the students.  Defaults to False.  
 	n : int
-		Number of iterations for the bootstrap.  Defaults to 10000.
+		Number of iterations for the bootstrap.  Defaults to 1000.
 	
 	Returns: 
 		Tuple:
@@ -233,7 +236,7 @@ def DisplayResults(dataset: pd.DataFrame,c=0.025, rubric=False, n=10000):
 			print(warning)	
 	return (rubricR, studentR, bootstrapR, countE, obs, param, AIC, BIC, McFadden, LR, ChiSquared)
 
-def SaveResults(dataset: pd.DataFrame,c=0.025, rubric=False, n=10000, rubricFile = 'rubric.csv', studentFile = 'student.csv', outputFile = 'output.csv'):
+def SaveResults(dataset: pd.DataFrame,c=0.025, rubric=False, n=1000, rubricFile = 'rubric.csv', studentFile = 'student.csv', outputFile = 'output.csv'):
 	"""
 	Estimates the parameters of the model and produces confidence intervals for the estimates using a bootstrap method. Results are printed out to the console and saved to CSV files.
 	
@@ -246,7 +249,7 @@ def SaveResults(dataset: pd.DataFrame,c=0.025, rubric=False, n=10000, rubricFile
 	rubric : bool
 		Switches the bootstrap to treating the rubric rows as blocks instead of the students.  Defaults to False.  
 	n : int
-		Number of iterations for the bootstrap.  Defaults to 10000.
+		Number of iterations for the bootstrap.  Defaults to 1000.
 	rubricFile : str
 		File name/path for the rubric results.  Defaults to 'rubric.csv'.
 	studentFile : str
