@@ -16,12 +16,10 @@ def itemPb(q, s, k, b):
 	return np.log(logistic(q,s) + (logistic(q,s) - 1) * np.ceil(-k/b)) + xlog1py(np.floor(k), -1*logistic(q,s)) 
 
 def opFunction(x, data):
-	array = np.array([ itemPb(x[item[1]], x[item[2]], item[0], item[3]) for item in data ])
-	return -1.0 * (array.sum())
+	return -1.0 * (np.array([ itemPb(x[item[1]], x[item[2]], item[0], item[3]) for item in data ]).sum())
 
 def opRestricted (x, data):
-	array = np.array([ itemPb(x[0], 0, item[0], item[3]) for item in data ])
-	return -1.0 * (array.sum())
+	return -1.0 * (np.array([ itemPb(x[0], 0, item[0], item[3]) for item in data ]).sum())
 
 def solve(dataset, summary = True):
 	studentCode, uniqueStudents = pd.factorize(dataset['student'])
