@@ -127,6 +127,7 @@ def getResults(dataset: pd.DataFrame,c=0.025, rubric=False, n=10000):
 	"""
 	if not isinstance(dataset, pd.DataFrame):
 		raise Exception('dataset must be a Pandas DataFrame')
+	dataset = dataset.rename(columns=lambda x: x.strip())
 	if not set(['k','bound', 'student', 'rubric']).issubset(dataset.columns):
 		raise Exception('Invalid pandas dataset, missing columns. k, bound, student, and rubric are required.')	
 	if not isinstance(c, float) and c >= 0 and c <= 0.5:
