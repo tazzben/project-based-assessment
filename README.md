@@ -13,7 +13,8 @@ getResults and DisplayResults take the following parameters:
 1. A pandas Dataset containing the columns "k", "student", "rubric", "bound".  The "k" column is the rubric level the given student reached on the given rubric row. The "student" column is a student identifier. The "rubric" column is a rubric row identifier. The "bound" column is maximum "k" value possible on the given rubric row.
 2. A float between 0 and 0.5 indicating the portion of the bootstrapped EDF to extract.  For instance, specifying 0.025 would produce the 95% confidence interval. Default is 0.025.
 3. A bool flag indicating to treat the rubric rows as blocks instead of the unique students in the bootstrap.  Defaults to False.
-4. The number of iterations in the bootstrap.  Defaults to 10000.
+4. The number of iterations in the bootstrap.  Defaults to 1000.
+5. Uses a simple linear combination of the rubric and student items instead of a sigmoid function when set to true.  Defaults to False.
 
 SaveResults takes the same parameters as getResults and DisplayResults but has the additional parameters of: rubricFile, studentFile, and outputFile (in that order).  These specify the filenames to save the results.  These default to "rubric.csv", "student.csv", and "output.csv".
 

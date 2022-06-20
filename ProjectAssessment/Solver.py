@@ -8,34 +8,46 @@ from scipy.special import expit, xlog1py
 from multiprocessing import Pool
 from progress.bar import Bar
 from prettytable import PrettyTable
+from sqlalchemy import false
 
 def logistic(q, s):
 	return expit(q+s)
 
-def itemPb(q, s, k, b):
+def itemPb(q, s, k, b, linear = False):
+	if linear:
+		return np.log(q + s + (q + s - 1) * np.ceil(-k/b)) + xlog1py(np.floor(k), -1*(q + s))
 	return np.log(logistic(q,s) + (logistic(q,s) - 1) * np.ceil(-k/b)) + xlog1py(np.floor(k), -1*logistic(q,s)) 
 
-def opFunction(x, data):
-	return -1.0 * (np.array([ itemPb(x[item[1]], x[item[2]], item[0], item[3]) for item in data ]).sum())
+def opFunction(x, data, linear = False):
+	return -1.0 * (np.array([ itemPb(x[item[1]], x[item[2]], item[0], item[3], linear) for item in data ]).sum())
 
-def opRestricted (x, data):
-	return -1.0 * (np.array([ itemPb(x[0], 0, item[0], item[3]) for item in data ]).sum())
+def opRestricted (x, data, linear = False):
+	return -1.0 * (np.array([ itemPb(x[0], 0, item[0], item[3], linear) for item in data ]).sum())
 
-def solve(dataset, summary = True):
+def solve(dataset, summary = True, linear = False):
 	studentCode, uniqueStudents = pd.factorize(dataset['student'])
 	questionCode, uniqueQuestion = pd.factorize(dataset['rubric'])
 	questionCode = questionCode + uniqueStudents.size
 	smap = np.concatenate((uniqueStudents, uniqueQuestion), axis=None).tolist()
 	data = list(zip(dataset['k'].to_numpy().flatten().tolist(), studentCode.tolist(), questionCode.tolist(), dataset['bound'].to_numpy().flatten().tolist()))
-	minValue = minimize(opFunction, [1/(2*(1+dataset['k'].mean()))]*len(smap), args=(data, ), method='Powell')
+	if linear:
+		bounds = [(0, 1)] * (uniqueStudents.size + uniqueQuestion.size)
+	else:
+		bounds = None
+	minValue = minimize(opFunction, [1/(2*(1+dataset['k'].mean()))]*len(smap), args=(data, linear), method='Powell', bounds=bounds)
 	if (minValue.success):
-		lmap = map(lambda x: logistic(x, 0), minValue.x.flatten().tolist())
-		fullResults = list(zip(smap, minValue.x.flatten().tolist(), lmap))
+		if linear:
+			fullResults = list(zip(smap, minValue.x.flatten().tolist()))
+			cols = ['Variable', 'Value']
+		else:
+			lmap = map(lambda x: logistic(x, 0), minValue.x.flatten().tolist())
+			fullResults = list(zip(smap, minValue.x.flatten().tolist(), lmap))
+			cols = ['Variable', 'Value', 'Logistic Transformed Value']
 		studentResults = fullResults[:uniqueStudents.size]
 		questionResults = fullResults[uniqueStudents.size:]
 		d = {
-			'student': pd.DataFrame(studentResults, columns=['Variable', 'Value', 'Logistic Transformed Value']),
-			'rubric': pd.DataFrame(questionResults, columns=['Variable', 'Value', 'Logistic Transformed Value'])
+			'student': pd.DataFrame(studentResults, columns=cols),
+			'rubric': pd.DataFrame(questionResults, columns=cols)
 		}
 		if not summary:
 			return d
@@ -43,7 +55,11 @@ def solve(dataset, summary = True):
 		d['BIC'] = (uniqueStudents.size+uniqueQuestion.size)*math.log(len(studentCode))+2*minValue.fun
 		d['n'] = len(studentCode)
 		d['NumberOfParameters'] = uniqueStudents.size+uniqueQuestion.size
-		minRestricted = minimize(opRestricted, [1/(1+dataset['k'].mean()),], args=(data, ), method='Powell')
+		if linear:
+			boundsSingle = [(0, 1)]
+		else:
+			boundsSingle = None 
+		minRestricted = minimize(opRestricted, [1/(1+dataset['k'].mean()),], args=(data, linear), method='Powell', bounds=boundsSingle)
 		if (minRestricted.success):
 			d['McFadden'] = 1 - minValue.fun/minRestricted.fun
 			d['LR'] = -2*math.log(math.exp(-1*minRestricted.fun+minValue.fun))
@@ -52,7 +68,7 @@ def solve(dataset, summary = True):
 	else:
 		raise Exception(minValue.message)
 
-def bootstrapRow (dataset, rubric=False):
+def bootstrapRow (dataset, rubric=False, linear=False):
 	key = 'rubric' if rubric else 'student'
 	ids = dataset[key].unique().flatten().tolist()
 	randomGroupIds = np.random.choice(ids, size=len(ids), replace=True)
@@ -62,21 +78,22 @@ def bootstrapRow (dataset, rubric=False):
 		rows.assign(rubric=c) if rubric else rows.assign(student=c)
 		l.append(rows)
 	resultData = pd.concat(l, ignore_index=True)
-	return solve(resultData, False)
+	return solve(resultData, False, linear)
 
 def CallRow(row):
 	key = 'student' if row['rubric'] else 'rubric'
-	r = bootstrapRow(row['dataset'], row['rubric'])
+	r = bootstrapRow(row['dataset'], row['rubric'], row['linear'])
 	if r is not None:
 		return r[key]
 	return None
 
-def bootstrap(dataset, n, rubric=False):
+def bootstrap(dataset, n, rubric=False, linear=False):
 	l = []
 	rows = [
 		{
 			'dataset': dataset,
-			'rubric': rubric
+			'rubric': rubric,
+			'linear': linear
 		}
 	]*n
 	bar = Bar('Processing', max=n)
@@ -96,7 +113,7 @@ def bootstrap(dataset, n, rubric=False):
 		'nones': len(nones)
 	}
 
-def getResults(dataset: pd.DataFrame,c=0.025, rubric=False, n=1000):
+def getResults(dataset: pd.DataFrame,c=0.025, rubric=False, n=1000, linear=False):
 	"""
 	Estimates the parameters of the model and produces confidence intervals for the estimates using a bootstrap method. 
 	
@@ -110,6 +127,9 @@ def getResults(dataset: pd.DataFrame,c=0.025, rubric=False, n=1000):
 		Switches the bootstrap to treating the rubric rows as blocks instead of the students.  Defaults to False.  
 	n : int
 		Number of iterations for the bootstrap.  Defaults to 1000.
+	linear: bool
+		Uses a simple linear combination of the rubric and student items instead of a sigmoid function.  Defaults to False.
+
 	
 	Returns: 
 		Tuple:
@@ -142,7 +162,7 @@ def getResults(dataset: pd.DataFrame,c=0.025, rubric=False, n=1000):
 	dataset = dataset[pd.to_numeric(dataset['bound'], errors='coerce').notnull()]
 	if not len(dataset.index) > 0:
 		raise Exception('Invalid pandas dataset, empty dataset.')
-	estimates = solve(dataset)
+	estimates = solve(dataset, linear=linear)
 	if estimates is not None:
 		results = bootstrap(dataset, n, rubric)
 		r = results['results']
@@ -150,14 +170,16 @@ def getResults(dataset: pd.DataFrame,c=0.025, rubric=False, n=1000):
 		for var in r['Variable'].unique():
 			df = r[r['Variable'] == var]['Value']
 			ci = (df.quantile(q=c), df.quantile(q=(1-c)))
-			transformedci = (logistic(df.quantile(q=c),0), logistic(df.quantile(q=(1-c)),0))
-			pvalue = (stats.percentileofscore(df, 0) / 100)*2 if np.mean(df) > 0 else (1 - (stats.percentileofscore(df, 0) / 100))*2
-			l.append({
+			vDict = {
 				'Variable': var,
 				'Confidence Interval': ci,
-				'Logistic Transformed Confidence Interval': transformedci,
-				'P-Value': pvalue,
-			})
+			}
+			if not linear:
+				transformedci = (logistic(df.quantile(q=c),0), logistic(df.quantile(q=(1-c)),0))
+				vDict['Logistic Transformed Confidence Interval'] = transformedci
+			pvalue = (stats.percentileofscore(df, 0) / 100)*2 if np.mean(df) > 0 else (1 - (stats.percentileofscore(df, 0) / 100))*2
+			vDict['P-Value'] = pvalue
+			l.append(vDict)
 		McFadden = None
 		LR = None
 		ChiSquared = None
@@ -169,7 +191,7 @@ def getResults(dataset: pd.DataFrame,c=0.025, rubric=False, n=1000):
 	else:
 		raise Exception('Could not find estimates.')
 
-def DisplayResults(dataset: pd.DataFrame,c=0.025, rubric=False, n=1000):
+def DisplayResults(dataset: pd.DataFrame,c=0.025, rubric=False, n=1000, linear=False):
 	"""
 	Estimates the parameters of the model and produces confidence intervals for the estimates using a bootstrap method. Results are printed out to the console.
 	
@@ -183,6 +205,9 @@ def DisplayResults(dataset: pd.DataFrame,c=0.025, rubric=False, n=1000):
 		Switches the bootstrap to treating the rubric rows as blocks instead of the students.  Defaults to False.  
 	n : int
 		Number of iterations for the bootstrap.  Defaults to 1000.
+	linear: bool
+		Uses a simple linear combination of the rubric and student items instead of a sigmoid function.  Defaults to False.
+
 	
 	Returns: 
 		Tuple:
@@ -199,7 +224,7 @@ def DisplayResults(dataset: pd.DataFrame,c=0.025, rubric=False, n=1000):
 			Chi-Squared P-Value of the model : float
 		
 	"""
-	rubricR, studentR, bootstrapR, countE, obs, param, AIC, BIC, McFadden, LR, ChiSquared = getResults(dataset, c, rubric, n)
+	rubricR, studentR, bootstrapR, countE, obs, param, AIC, BIC, McFadden, LR, ChiSquared = getResults(dataset, c, rubric, n, linear)
 	warnings = []
 	if rubric is True:
 		printedStudent = studentR.merge(bootstrapR, on='Variable', how='inner')
@@ -234,7 +259,7 @@ def DisplayResults(dataset: pd.DataFrame,c=0.025, rubric=False, n=1000):
 			print(warning)	
 	return (rubricR, studentR, bootstrapR, countE, obs, param, AIC, BIC, McFadden, LR, ChiSquared)
 
-def SaveResults(dataset: pd.DataFrame,c=0.025, rubric=False, n=1000, rubricFile = 'rubric.csv', studentFile = 'student.csv', outputFile = 'output.csv'):
+def SaveResults(dataset: pd.DataFrame,c=0.025, rubric=False, n=1000, linear=False, rubricFile = 'rubric.csv', studentFile = 'student.csv', outputFile = 'output.csv'):
 	"""
 	Estimates the parameters of the model and produces confidence intervals for the estimates using a bootstrap method. Results are printed out to the console and saved to CSV files.
 	
@@ -248,6 +273,8 @@ def SaveResults(dataset: pd.DataFrame,c=0.025, rubric=False, n=1000, rubricFile 
 		Switches the bootstrap to treating the rubric rows as blocks instead of the students.  Defaults to False.  
 	n : int
 		Number of iterations for the bootstrap.  Defaults to 1000.
+	linear: bool
+		Uses a simple linear combination of the rubric and student items instead of a sigmoid function.  Defaults to False.
 	rubricFile : str
 		File name/path for the rubric results.  Defaults to 'rubric.csv'.
 	studentFile : str
@@ -270,7 +297,7 @@ def SaveResults(dataset: pd.DataFrame,c=0.025, rubric=False, n=1000, rubricFile 
 			Chi-Squared P-Value of the model : float
 		
 	"""
-	rubricR, studentR, bootstrapR, countE, obs, param, AIC, BIC, McFadden, LR, ChiSquared  = DisplayResults(dataset, c, rubric, n)
+	rubricR, studentR, bootstrapR, countE, obs, param, AIC, BIC, McFadden, LR, ChiSquared  = DisplayResults(dataset, c, rubric, n, linear)
 	if rubric is True:
 		printedStudent = studentR.merge(bootstrapR, on='Variable', how='inner')
 		printedRubric = rubricR
