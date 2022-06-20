@@ -22,6 +22,6 @@ setup(
     ],
     keywords = ['Assessment', 'Projects', 'Statistics', 'Education', 'Bootstrap'],
     url = 'https://github.com/tazzben/project-based-assessment',
-#    download_url = 'https://github.com/tazzben/project-based-assessment/archive/v0.0.1.tar.gz',  
+    download_url = 'https://github.com/tazzben/project-based-assessment/archive/v0.0.2.tar.gz',  
     description = 'Package to compute the Project-Based Assessment estimates of student and rubric proficiency.',
 )
