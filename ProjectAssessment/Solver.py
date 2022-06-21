@@ -4,7 +4,7 @@ import math
 from scipy.optimize import minimize
 from scipy import stats
 from scipy.stats.distributions import chi2
-from scipy.special import expit, xlog1py
+from scipy.special import expit, xlog1py, xlogy
 from multiprocessing import Pool
 from progress.bar import Bar
 from prettytable import PrettyTable
@@ -14,8 +14,8 @@ def logistic(q, s):
 
 def itemPb(q, s, k, b, linear = False):
 	if linear:
-		return np.log(q + s + (q + s - 1) * np.ceil(-k/b)) + xlog1py(np.floor(k), -1*(q + s))
-	return np.log(logistic(q,s) + (logistic(q,s) - 1) * np.ceil(-k/b)) + xlog1py(np.floor(k), -1*logistic(q,s)) 
+		return xlogy(1, q + s + (q + s - 1) * np.ceil(-k/b)) + xlog1py(np.floor(k), -1*(q+s))
+	return  xlogy(1, logistic(q,s) + (logistic(q,s) - 1) * np.ceil(-k/b)) + xlog1py(np.floor(k), -1*logistic(q,s)) 
 
 def opFunction(x, data, linear = False):
 	return -1.0 * (np.array([ itemPb(x[item[1]], x[item[2]], item[0], item[3], linear) for item in data ]).sum())
@@ -61,7 +61,7 @@ def solve(dataset, summary = True, linear = False):
 		minRestricted = minimize(opRestricted, [1/(1+dataset['k'].mean()),], args=(data, linear), method='Powell', bounds=boundsSingle)
 		if (minRestricted.success):
 			d['McFadden'] = 1 - minValue.fun/minRestricted.fun
-			d['LR'] = -2*math.log(math.exp(-1*minRestricted.fun+minValue.fun))
+			d['LR'] = -2*(-1*minRestricted.fun+minValue.fun)
 			d['Chi-Squared'] = chi2.sf(d['LR'], (uniqueStudents.size+uniqueQuestion.size-1))
 		return d
 	else:
