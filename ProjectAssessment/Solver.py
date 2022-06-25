@@ -64,8 +64,9 @@ def solve(dataset, summary = True, linear = False):
             d['LR'] = -2*(-1*minRestricted.fun+minValue.fun)
             d['Chi-Squared'] = chi2.sf(d['LR'], (uniqueStudents.size+uniqueQuestion.size-1))
         return d
-    else:
-        raise Exception(minValue.message)
+    if not summary:
+        return None
+    raise Exception(minValue.message)
 
 def bootstrapRow (dataset, rubric=False, linear=False):
     key = 'rubric' if rubric else 'student'
@@ -163,7 +164,7 @@ def getResults(dataset: pd.DataFrame,c=0.025, rubric=False, n=1000, linear=False
         raise Exception('Invalid pandas dataset, empty dataset.')
     estimates = solve(dataset, linear=linear)
     if estimates is not None:
-        results = bootstrap(dataset, n, rubric)
+        results = bootstrap(dataset, n, rubric, linear=linear)
         r = results['results']
         l = []
         for var in r['Variable'].unique():
