@@ -7,7 +7,7 @@ from scipy import stats
 from scipy.stats.distributions import chi2
 from scipy.special import expit, xlog1py, xlogy
 from progress.bar import Bar
-from prettytable import PrettyTable
+from .MakeTable import MakeTwoByTwoTable
 
 def logistic(q, s):
     return expit(q+s)
@@ -239,20 +239,19 @@ def DisplayResults(dataset: pd.DataFrame,c=0.025, rubric=False, n=1000, linear=F
     if countE > 0:
         warnings.append(str(countE) + ' of ' + str(n) + ' bootstrap samples were empty.')
 
-    x = PrettyTable(align='r')
+    x = []
 
-    x.field_names = ["", "Value",]
-    x.add_row(["Number of Observations:", obs])
-    x.add_row(["Number of Parameters:", param])
-    x.add_row(["AIC:", AIC])
-    x.add_row(["BIC:", BIC])
+    x.append(["Number of Observations", obs])
+    x.append(["Number of Parameters", param])
+    x.append(["AIC", AIC])
+    x.append(["BIC", BIC])
     if McFadden is not None:
-        x.add_row(["McFadden R^2:", McFadden])
-        x.add_row(["Likelihood Ratio Test Statistic:", LR])
-        x.add_row(["Chi-Squared LR P-Value:", ChiSquared])
+        x.append(["McFadden R^2", McFadden])
+        x.append(["Likelihood Ratio Test Statistic", LR])
+        x.append(["Chi-Squared LR P-Value", ChiSquared])
     else:
         warnings.append('McFadden R^2, Likelihood Ratio Test, and Chi-Squared LR Test could not be displayed because the restricted model could not be solved.')
-    print(x)
+    MakeTwoByTwoTable(x)
     if len(warnings) > 0:
         print('Warnings:')
         for warning in warnings:
