@@ -3,7 +3,7 @@ from multiprocessing import Pool
 import numpy as np
 import pandas as pd
 from scipy.optimize import minimize
-from scipy import stats
+from scipy.stats import percentileofscore
 from scipy.stats.distributions import chi2
 from scipy.special import expit, xlog1py, xlogy
 from progress.bar import Bar
@@ -177,7 +177,7 @@ def getResults(dataset: pd.DataFrame,c=0.025, rubric=False, n=1000, linear=False
             if not linear:
                 transformedci = (logistic(df.quantile(q=c),0), logistic(df.quantile(q=(1-c)),0))
                 vDict['Logistic Transformed Confidence Interval'] = transformedci
-            pvalue = (stats.percentileofscore(df, 0) / 100)*2 if np.mean(df) > 0 else (1 - (stats.percentileofscore(df, 0) / 100))*2
+            pvalue = (percentileofscore(df, 0) / 100)*2 if np.mean(df) > 0 else (1 - (percentileofscore(df, 0) / 100))*2
             vDict['P-Value'] = pvalue
             l.append(vDict)
         McFadden = None
