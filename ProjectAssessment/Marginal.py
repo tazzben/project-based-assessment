@@ -1,4 +1,5 @@
 import numpy as np
+import pandas as pd
 from scipy.special import expit
 
 def probability(q, s, linear = False):
@@ -21,7 +22,13 @@ def dItemPb(q, s, k, b, question = False, linear = False):
 def calculateMarginal(position, data, estX, studentSize, linear = False):
     question = False if position < studentSize else True
     subData = [x for x in data if position == x[2]] if question else [x for x in data if position == x[1]]
-    return np.array([ dItemPb(estX[x[1]], estX[x[2]], x[0], x[3], question, linear) for x in subData ]).mean()
+    maxB = max([x[3] for x in subData])
+    r = {}
+    for b in range(0, maxB+1):
+        r["k=" + str(b)] = [ np.array([ dItemPb(estX[x[1]], estX[x[2]], b, x[3], question, linear) for x in subData ]).mean() ]
+    return pd.DataFrame(r)
 
-def calculateMarginals(data, estX, studentSize, linear = False):
-    return [ calculateMarginal(x, data, estX, studentSize, linear) for x in range(len(estX)) ]
+def calculateMarginals(data, estX, studentSize, linear = False): 
+    studentResults = pd.concat([ calculateMarginal(x, data, estX, studentSize, linear) for x in range(0, studentSize)], ignore_index=True)
+    rubricResults = pd.concat([ calculateMarginal(x, data, estX, studentSize, linear) for x in range(studentSize, len(estX))], ignore_index=True)
+    return studentResults, rubricResults

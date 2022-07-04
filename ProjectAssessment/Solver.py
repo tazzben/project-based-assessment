@@ -34,17 +34,20 @@ def solve(dataset, summary = True, linear = False):
     minValue = minimize(opFunction, [1/(2*(1+dataset['k'].mean()))]*len(smap), args=(data, linear), method='Powell', bounds=bounds)
     if minValue.success:
         estX = minValue.x.flatten().tolist()
-        marginals = calculateMarginals(data, estX, uniqueStudents.size, linear)
-        fullResults = list(zip(smap, estX, marginals))
-        cols = ['Variable', 'Value', 'Marginal']
-        studentResults = fullResults[:uniqueStudents.size]
-        questionResults = fullResults[uniqueStudents.size:]
-        d = {
-            'student': pd.DataFrame(studentResults, columns=cols),
-            'rubric': pd.DataFrame(questionResults, columns=cols)
-        }
+        fullResults = list(zip(smap, estX))
+        cols = ['Variable', 'Value']
+        studentResults = pd.DataFrame(fullResults[:uniqueStudents.size], columns=cols)
+        questionResults = pd.DataFrame(fullResults[uniqueStudents.size:], columns=cols)
         if not summary:
-            return d
+            return {
+                'student': studentResults,
+                'rubric': questionResults
+            }
+        studentMarginals, rubricMarginals = calculateMarginals(data, estX, uniqueStudents.size, linear)
+        d = {
+            'student': studentResults.join(studentMarginals),
+            'rubric': questionResults.join(rubricMarginals)
+        }
         d['AIC'] = 2*(uniqueStudents.size+uniqueQuestion.size)+2*minValue.fun
         d['BIC'] = (uniqueStudents.size+uniqueQuestion.size)*math.log(len(studentCode))+2*minValue.fun
         d['n'] = len(studentCode)
@@ -164,16 +167,14 @@ def getResults(dataset: pd.DataFrame,c=0.025, rubric=False, n=1000, linear=False
         l = []
         for var in r['Variable'].unique():
             df = r[r['Variable'] == var]['Value']
-            dfM = r[r['Variable'] == var]['Marginal']
             ci = (df.quantile(q=c), df.quantile(q=(1-c)))
-            ciM = (dfM.quantile(q=c), dfM.quantile(q=(1-c)))
             vDict = {
                 'Variable': var,
                 'Confidence Interval': ci,
-                'Marginal Confidence Interval': ciM,
             }
-            pvalue = (percentileofscore(df, 0) / 100)*2 if np.mean(df) > 0 else (1 - (percentileofscore(df, 0) / 100))*2
-            vDict['P-Value'] = pvalue
+            if not linear:
+                pvalue = (percentileofscore(df, 0) / 100)*2 if np.mean(df) > 0 else (1 - (percentileofscore(df, 0) / 100))*2
+                vDict['P-Value'] = pvalue
             l.append(vDict)
         McFadden = None
         LR = None
