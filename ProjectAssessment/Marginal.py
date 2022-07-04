@@ -19,4 +19,5 @@ def probabilityDerivative(q, s, question = False, linear = False):
     return logisticD(q, s, question)
 
 def dItemPb(q, s, k, b, question = False, linear = False):
-    return -np.floor(k) * probabilityDerivative(q, s, question, linear) / (1 - probability(q, s, linear)) + (probabilityDerivative(q, s, question, linear) + probabilityDerivative(q, s, question, linear) * np.ceil(-k/b))/(probability(q, s, linear) + (probability(q, s, linear) - 1) * np.ceil(-k/b))
+    return probabilityDerivative(q, s, question, linear)*(-1*(1-probability(q, s, linear))**(np.floor(k)-1))*(-1*(np.floor(k)+1)*np.floor(k/b)*(probability(q, s, linear)-1)+(np.floor(k)+1)*probability(q, s, linear)-1)
+    
