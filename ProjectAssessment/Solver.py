@@ -8,14 +8,12 @@ from scipy.stats.distributions import chi2
 from scipy.special import expit, xlog1py, xlogy
 from progress.bar import Bar
 from .MakeTable import MakeTwoByTwoTable
-
-def logistic(q, s):
-    return expit(q+s)
+from .Marginal import calculateMarginals
 
 def itemPb(q, s, k, b, linear = False):
     if linear:
         return xlogy(1, q + s + (q + s - 1) * np.ceil(-k/b)) + xlog1py(np.floor(k), -1*(q+s))
-    return  xlogy(1, logistic(q,s) + (logistic(q,s) - 1) * np.ceil(-k/b)) + xlog1py(np.floor(k), -1*logistic(q,s))
+    return  xlogy(1, expit(q+s) + (expit(q+s) - 1) * np.ceil(-k/b)) + xlog1py(np.floor(k), -1*expit(q+s))
 
 def opFunction(x, data, linear = False):
     return -1.0 * (np.array([ itemPb(x[item[1]], x[item[2]], item[0], item[3], linear) for item in data ]).sum())
@@ -35,13 +33,10 @@ def solve(dataset, summary = True, linear = False):
         bounds = None
     minValue = minimize(opFunction, [1/(2*(1+dataset['k'].mean()))]*len(smap), args=(data, linear), method='Powell', bounds=bounds)
     if minValue.success:
-        if linear:
-            fullResults = list(zip(smap, minValue.x.flatten().tolist()))
-            cols = ['Variable', 'Value']
-        else:
-            lmap = map(lambda x: logistic(x, 0), minValue.x.flatten().tolist())
-            fullResults = list(zip(smap, minValue.x.flatten().tolist(), lmap))
-            cols = ['Variable', 'Value', 'Logistic Transformed Value']
+        estX = minValue.x.flatten().tolist()
+        marginals = calculateMarginals(data, estX, uniqueStudents.size, linear)
+        fullResults = list(zip(smap, estX, marginals))
+        cols = ['Variable', 'Value', 'Marginal']
         studentResults = fullResults[:uniqueStudents.size]
         questionResults = fullResults[uniqueStudents.size:]
         d = {
@@ -169,14 +164,14 @@ def getResults(dataset: pd.DataFrame,c=0.025, rubric=False, n=1000, linear=False
         l = []
         for var in r['Variable'].unique():
             df = r[r['Variable'] == var]['Value']
+            dfM = r[r['Variable'] == var]['Marginal']
             ci = (df.quantile(q=c), df.quantile(q=(1-c)))
+            ciM = (dfM.quantile(q=c), dfM.quantile(q=(1-c)))
             vDict = {
                 'Variable': var,
                 'Confidence Interval': ci,
+                'Marginal Confidence Interval': ciM,
             }
-            if not linear:
-                transformedci = (logistic(df.quantile(q=c),0), logistic(df.quantile(q=(1-c)),0))
-                vDict['Logistic Transformed Confidence Interval'] = transformedci
             pvalue = (percentileofscore(df, 0) / 100)*2 if np.mean(df) > 0 else (1 - (percentileofscore(df, 0) / 100))*2
             vDict['P-Value'] = pvalue
             l.append(vDict)
