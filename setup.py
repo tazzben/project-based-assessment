@@ -2,7 +2,7 @@ from distutils.core import setup
 
 setup(
     name='ProjectAssessment',
-    version='0.0.13',
+    version='0.1.0',
     packages=['ProjectAssessment',],
     python_requires='>3.7.0',
     license='MIT',
@@ -24,6 +24,6 @@ setup(
     ],
     keywords = ['Assessment', 'Projects', 'Statistics', 'Education', 'Bootstrap'],
     url = 'https://github.com/tazzben/project-based-assessment',
-    download_url = 'https://github.com/tazzben/project-based-assessment/archive/v0.0.13.tar.gz',  
+    download_url = 'https://github.com/tazzben/project-based-assessment/archive/v0.1.0.tar.gz',  
     description = 'Package to compute the Project-Based Assessment estimates of student and rubric proficiency.',
 )
