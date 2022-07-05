@@ -1,6 +1,6 @@
 import numpy as np
 import pandas as pd
-from scipy.special import expit, xlogy, xlog1py
+from scipy.special import expit
 
 def probability(q, s, linear = False):
     return q + s if linear else expit(q + s)
