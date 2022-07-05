@@ -16,7 +16,7 @@ def itemPb(q, s, k, b, linear = False):
     return  xlogy(1, expit(q+s) + (expit(q+s) - 1) * np.ceil(-k/b)) + xlog1py(np.floor(k), -1*expit(q+s))
 
 def opFunction(x, data, linear = False):
-    return -1.0 * (np.array([ itemPb(x[item[1]], x[item[2]], item[0], item[3], linear) for item in data ]).sum())
+    return -1.0 * (np.array([ itemPb(x[item[2]], x[item[1]], item[0], item[3], linear) for item in data ]).sum())
 
 def opRestricted (x, data, linear = False):
     return -1.0 * (np.array([ itemPb(x[0], 0, item[0], item[3], linear) for item in data ]).sum())
