@@ -10,10 +10,14 @@ from progress.bar import Bar
 from .MakeTable import MakeTwoByTwoTable
 from .Marginal import calculateMarginals
 
-def itemPb(q, s, k, b, linear = False):
+def pFunc(q, s, b, linear = False):
     if linear:
-        return xlogy(1, q + s + (q + s - 1) * np.ceil(-k/b)) + xlog1py(np.floor(k), -1*(q+s))
-    return  xlogy(1, expit(q+s) + (expit(q+s) - 1) * np.ceil(-k/b)) + xlog1py(np.floor(k), -1*expit(q+s))
+        return (q + s)/b
+    else:
+        return expit((q + s)/b)
+
+def itemPb(q, s, k, b, linear = False):
+    return  xlogy(1, pFunc(q,s,b,linear) + (pFunc(q,s,b,linear) - 1) * np.ceil(-k/b)) + xlog1py(np.floor(k), -1*pFunc(q,s,b,linear))
 
 def opFunction(x, data, linear = False):
     return -1.0 * (np.array([ itemPb(x[item[2]], x[item[1]], item[0], item[3], linear) for item in data ]).sum())
@@ -28,7 +32,8 @@ def solve(dataset, summary = True, linear = False):
     smap = np.concatenate((uniqueStudents, uniqueQuestion), axis=None).tolist()
     data = list(zip(dataset['k'].to_numpy().flatten().tolist(), studentCode.tolist(), questionCode.tolist(), dataset['bound'].to_numpy().flatten().tolist()))
     if linear:
-        bounds = [(0, 1)] * (uniqueStudents.size + uniqueQuestion.size)
+        constraint = min(dataset['bound'].to_numpy().flatten().tolist())
+        bounds = [(0, constraint)] * (uniqueStudents.size + uniqueQuestion.size)
     else:
         bounds = None
     minValue = minimize(opFunction, [1/(2*(1+dataset['k'].mean()))]*len(smap), args=(data, linear), method='Powell', bounds=bounds)
@@ -53,7 +58,7 @@ def solve(dataset, summary = True, linear = False):
         d['n'] = len(studentCode)
         d['NumberOfParameters'] = uniqueStudents.size+uniqueQuestion.size
         if linear:
-            boundsSingle = [(0, 1)]
+            boundsSingle = [(0, constraint)]
         else:
             boundsSingle = None
         minRestricted = minimize(opRestricted, [1/(1+dataset['k'].mean()),], args=(data, linear), method='Powell', bounds=boundsSingle)

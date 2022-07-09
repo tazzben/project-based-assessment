@@ -2,25 +2,25 @@ import numpy as np
 import pandas as pd
 from scipy.special import expit
 
-def probability(q, s, linear = False):
-    return q + s if linear else expit(q + s)
+def probability(q, s, b, linear = False):
+    return (q + s)/b if linear else expit((q + s)/b)
 
-def logisticD(q, s, question = False):    
-    return q * expit(q + s)*(1-expit(q + s)) if question else s * expit(q + s)*(1 - expit(q + s))
+def logisticD(q, s, b, question = False):   
+    return (q/b) * expit((q + s)/b)*(1-expit((q + s)/b)) if question else (s/b) * expit((q + s)/b)*(1 - expit((q + s)/b))
 
-def linearD(q, s, question = False):
-    return q if question else s
+def linearD(q, s, b, question = False):
+    return q/b if question else s/b
 
-def probabilityDerivative(q, s, question = False, linear = False):
-    return linearD(q, s, question) if linear else logisticD(q, s, question)
+def probabilityDerivative(q, s, b, question = False, linear = False):
+    return linearD(q, s, b, question) if linear else logisticD(q, s, b, question)
 
 def itemPb(q, s, k, b, linear = False):
-    return (probability(q,s,linear)+(probability(q,s,linear)-1)*np.ceil(-k/b))*(1-probability(q,s,linear))**(np.floor(k))
+    return (probability(q, s, b, linear)+(probability(q, s, b, linear)-1)*np.ceil(-k/b))*(1-probability(q, s, b, linear))**(np.floor(k))
 
 def dItemPb(q, s, k, b, question = False, linear = False):
     if k == 0:
-        return probabilityDerivative(q, s, question, linear)
-    return probabilityDerivative(q, s, question, linear)*(-1*(1-probability(q, s, linear))**(np.floor(k)-1))*(-1*(np.floor(k)+1)*np.floor(k/b)*(probability(q, s, linear)-1)+(np.floor(k)+1)*probability(q, s, linear)-1)
+        return probabilityDerivative(q, s, b, question, linear)
+    return probabilityDerivative(q, s, b, question, linear)*(-1*(1-probability(q, s, b, linear))**(np.floor(k)-1))*(-1*(np.floor(k)+1)*np.floor(k/b)*(probability(q, s, b, linear)-1)+(np.floor(k)+1)*probability(q, s, b, linear)-1)
 
 def calculateMarginal(position, data, estX, studentSize, linear = False):
     question = False if position < studentSize else True
@@ -28,7 +28,7 @@ def calculateMarginal(position, data, estX, studentSize, linear = False):
     maxB = max([x[3] for x in subData])
     r = {}
     if not linear:
-        r['Average Logistic'] = [ np.array([ probability(estX[x[2]], estX[x[1]], linear) for x in subData]).mean() ]
+        r['Average Logistic'] = [ np.array([ probability(estX[x[2]], estX[x[1]], x[3], linear) for x in subData]).mean() ]
     for b in range(0, maxB+1):
         r["ACP k=" + str(b)] = [ np.array([ itemPb(estX[x[2]], estX[x[1]], b, x[3], linear) for x in subData ]).mean() ]
     for b in range(0, maxB+1):
