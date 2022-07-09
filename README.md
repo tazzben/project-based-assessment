@@ -20,9 +20,9 @@ SaveResults takes the same parameters as getResults and DisplayResults but has t
 
 All methods return the following:
 
-1. Rubric difficulty estimates as a pandas dataframe.
-2. Student ability estimates as a pandas dataframe.
-3. Bootstrap confidence intervals and P-Values as a pandas dataframe.
+1. Rubric difficulty estimates as a pandas dataframe. Additional interpretation columns are provided in this dataframe that will be described below.
+2. Student ability estimates as a pandas dataframe.  Additional interpretation columns are provided in this dataframe that will be described below.
+3. Bootstrap confidence intervals and P-Values as a pandas dataframe. P-Values are only provided when estimating the non-linear model as they will always be zero for the linear model (by construction the estimates are constrained between 0 and 1 in the linear model).
 4. The number of times the bootstrap routine could not find a solution (if any).
 5. Number of observations.
 6. Number of parameters.
@@ -33,3 +33,10 @@ All methods return the following:
 11. Chi-Squared P-Value of the model (i.e. Wilks' theorem)
 
 getResults only return these values as a tuple.  DisplayResults returns the values as a tuple and prints the results to screen.  SaveResults returns the values as a tuple, displays the results and saves the results to CSV files.
+
+The rubric difficulty and student ability pandas dataframes return estimates along with columns used for interpretation.  The following columns are provided: 
+
+* AME k=i: The average marginal effect of k=i.  This is provided for all possible bins (i between 0 and the highest bin).  This procedure calculates the marginal effect for a given estimate conditioned on k=i for all observations impacted by the estimate.  The average is then calculated. When the dataset is balanced (all students have a score for all rubric rows), these values will sum to zero.
+* ACP k=i: While average marginal effect is the standard approach to interpreting MLE results (especially in a logit or probit context), we don't think they are particularly useful in this model.  Therefore, the application also provides columns for the average conditional probability of k=i.  Given the subset of the data used to calculate AME, this is the average probability of k=i given the estimated value.  When the dataset is balanced (all students have a score for all rubric rows), these values will sum to 1.  Note that the top bin is capturing the censoring effect. Therefore, it is common that a substantial probability is estimated for this bin.
+* Average Logistic: This estimate is only provided when estimating the non-linear model.  It is the average of the probability function given the estimated value.  It uses the same subset of the data used to calculate AME and ACP above.  In terms of interpretation, it is average chance of failure to proceed to the next bin.  Therefore, it will equal ACP k=0.  This column is the most closely related estimates in the logistic model to the estimates in the linear model. 
+    

@@ -28,7 +28,7 @@ def calculateMarginal(position, data, estX, studentSize, linear = False):
     maxB = max([x[3] for x in subData])
     r = {}
     if not linear:
-        r['Logistic at Mean'] = [ np.array([ probability(estX[x[2]], estX[x[1]], linear) for x in subData]).mean() ]
+        r['Average Logistic'] = [ np.array([ probability(estX[x[2]], estX[x[1]], linear) for x in subData]).mean() ]
     for b in range(0, maxB+1):
         r["ACP k=" + str(b)] = [ np.array([ itemPb(estX[x[2]], estX[x[1]], b, x[3], linear) for x in subData ]).mean() ]
     for b in range(0, maxB+1):
