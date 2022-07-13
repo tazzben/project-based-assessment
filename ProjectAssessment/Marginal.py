@@ -29,6 +29,7 @@ def calculateMarginal(position, data, estX, studentSize, linear = False):
     r = {}
     if not linear:
         r['Average Logistic'] = [ np.array([ probability(estX[x[2]], estX[x[1]], linear) for x in subData]).mean() ]
+        r['Average Marginal Logistic'] = [ np.array([ logisticD(estX[x[2]], estX[x[1]], question) for x in subData]).mean() ]
     for b in range(0, minB+1):
         r["ACP k=" + str(b)] = [ np.array([ itemPb(estX[x[2]], estX[x[1]], b, minB, linear) for x in subData ]).mean() ]
     for b in range(0, minB+1):
