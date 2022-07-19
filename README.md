@@ -31,6 +31,7 @@ All methods return the following:
 9. McFadden pseudo-R^2
 10. Likelihood Ratio test statistic
 11. Chi-Squared P-Value of the model (i.e. Wilks' theorem)
+12. Log Likelihood value
 
 getResults only return these values as a tuple.  DisplayResults returns the values as a tuple and prints the results to screen.  SaveResults returns the values as a tuple, displays the results and saves the results to CSV files.
 

@@ -48,6 +48,7 @@ def solve(dataset, summary = True, linear = False):
             'student': studentResults.join(studentMarginals),
             'rubric': questionResults.join(rubricMarginals)
         }
+        d['LogLikelihood'] = -1.0 * minValue.fun
         d['AIC'] = 2*(uniqueStudents.size+uniqueQuestion.size)+2*minValue.fun
         d['BIC'] = (uniqueStudents.size+uniqueQuestion.size)*math.log(len(studentCode))+2*minValue.fun
         d['n'] = len(studentCode)
@@ -183,7 +184,7 @@ def getResults(dataset: pd.DataFrame,c=0.025, rubric=False, n=1000, linear=False
             McFadden = estimates["McFadden"]
             LR = estimates["LR"]
             ChiSquared = estimates["Chi-Squared"]
-        return (estimates['rubric'], estimates['student'], pd.DataFrame(l), results['nones'], estimates['n'], estimates['NumberOfParameters'], estimates['AIC'], estimates['BIC'], McFadden, LR, ChiSquared)
+        return (estimates['rubric'], estimates['student'], pd.DataFrame(l), results['nones'], estimates['n'], estimates['NumberOfParameters'], estimates['AIC'], estimates['BIC'], McFadden, LR, ChiSquared, estimates['LogLikelihood'])
     else:
         raise Exception('Could not find estimates.')
 
@@ -220,7 +221,7 @@ def DisplayResults(dataset: pd.DataFrame,c=0.025, rubric=False, n=1000, linear=F
             Chi-Squared P-Value of the model : float
 
     """
-    rubricR, studentR, bootstrapR, countE, obs, param, AIC, BIC, McFadden, LR, ChiSquared = getResults(dataset, c, rubric, n, linear)
+    rubricR, studentR, bootstrapR, countE, obs, param, AIC, BIC, McFadden, LR, ChiSquared, LogLikelihood = getResults(dataset, c, rubric, n, linear)
     warnings = []
     if rubric is True:
         printedStudent = studentR.merge(bootstrapR, on='Variable', how='inner')
@@ -239,6 +240,7 @@ def DisplayResults(dataset: pd.DataFrame,c=0.025, rubric=False, n=1000, linear=F
 
     x.append(["Number of Observations", obs])
     x.append(["Number of Parameters", param])
+    x.append(["Log Likelihood", LogLikelihood])
     x.append(["AIC", AIC])
     x.append(["BIC", BIC])
     if McFadden is not None:
@@ -252,7 +254,7 @@ def DisplayResults(dataset: pd.DataFrame,c=0.025, rubric=False, n=1000, linear=F
         print('Warnings:')
         for warning in warnings:
             print(warning)
-    return (rubricR, studentR, bootstrapR, countE, obs, param, AIC, BIC, McFadden, LR, ChiSquared)
+    return (rubricR, studentR, bootstrapR, countE, obs, param, AIC, BIC, McFadden, LR, ChiSquared, LogLikelihood)
 
 def SaveResults(dataset: pd.DataFrame,c=0.025, rubric=False, n=1000, linear=False, rubricFile = 'rubric.csv', studentFile = 'student.csv', outputFile = 'output.csv'):
     """
@@ -292,7 +294,7 @@ def SaveResults(dataset: pd.DataFrame,c=0.025, rubric=False, n=1000, linear=Fals
             Chi-Squared P-Value of the model : float
 
     """
-    rubricR, studentR, bootstrapR, countE, obs, param, AIC, BIC, McFadden, LR, ChiSquared  = DisplayResults(dataset, c, rubric, n, linear)
+    rubricR, studentR, bootstrapR, countE, obs, param, AIC, BIC, McFadden, LR, ChiSquared, LogLikelihood  = DisplayResults(dataset, c, rubric, n, linear)
     if rubric is True:
         printedStudent = studentR.merge(bootstrapR, on='Variable', how='inner')
         printedRubric = rubricR
@@ -304,6 +306,7 @@ def SaveResults(dataset: pd.DataFrame,c=0.025, rubric=False, n=1000, linear=Fals
     output = {
         'Number of Observations': obs,
         'Number of Parameters': param,
+        'Log Likelihood': LogLikelihood,
         'AIC': AIC,
         'BIC': BIC,
         'McFadden R^2': McFadden,
@@ -311,4 +314,4 @@ def SaveResults(dataset: pd.DataFrame,c=0.025, rubric=False, n=1000, linear=Fals
         'Chi-Squared LR Test P-Value': ChiSquared,
     }
     pd.DataFrame.from_dict(output, orient='index').to_csv(outputFile, header=False)
-    return (rubricR, studentR, bootstrapR, countE, obs, param, AIC, BIC, McFadden, LR, ChiSquared)
+    return (rubricR, studentR, bootstrapR, countE, obs, param, AIC, BIC, McFadden, LR, ChiSquared, LogLikelihood)
