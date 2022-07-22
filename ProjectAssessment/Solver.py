@@ -143,6 +143,7 @@ def getResults(dataset: pd.DataFrame,c=0.025, rubric=False, n=1000, linear=False
             McFadden R^2 : float
             Likelihood Ratio Test Statistic of the model : float
             Chi-Squared P-Value of the model : float
+            Log Likelihood : float
 
     """
     if not isinstance(dataset, pd.DataFrame):
@@ -219,6 +220,7 @@ def DisplayResults(dataset: pd.DataFrame,c=0.025, rubric=False, n=1000, linear=F
             McFadden R^2 : float
             Likelihood Ratio Test Statistic of the model : float
             Chi-Squared P-Value of the model : float
+            Log Likelihood : float
 
     """
     rubricR, studentR, bootstrapR, countE, obs, param, AIC, BIC, McFadden, LR, ChiSquared, LogLikelihood = getResults(dataset, c, rubric, n, linear)
@@ -292,6 +294,7 @@ def SaveResults(dataset: pd.DataFrame,c=0.025, rubric=False, n=1000, linear=Fals
             McFadden R^2 : float
             Likelihood Ratio Test Statistic of the model : float
             Chi-Squared P-Value of the model : float
+            Log Likelihood : float
 
     """
     rubricR, studentR, bootstrapR, countE, obs, param, AIC, BIC, McFadden, LR, ChiSquared, LogLikelihood  = DisplayResults(dataset, c, rubric, n, linear)
