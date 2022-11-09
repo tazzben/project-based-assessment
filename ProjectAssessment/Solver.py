@@ -251,7 +251,7 @@ def DisplayResults(dataset: pd.DataFrame,c=0.025, rubric=False, n=1000, linear=F
     if rubric is True:
         printedStudent = studentR.merge(bootstrapR, on='Variable', how='left')
         if isinstance(columns, list) and len(columns) > 0:
-            specialbootstrap = bootstrapR[-len(columns):]
+            specialbootstrap = bootstrapR[bootstrapR['Variable'].isin(columns)]
             printedRubric = rubricR.merge(specialbootstrap, on='Variable', how='left')
         else:
             printedRubric = rubricR
