@@ -11,7 +11,7 @@ from .MakeTable import MakeTwoByTwoTable
 from .Marginal import calculateMarginals
 
 def itemPb(q, s, k, b, xVari, itemi, linear = False):
-    if isinstance(xVari, list) and isinstance(itemi, list):
+    if xVari is not None and itemi is not None:
         vS = sum([xVari[i] * itemi[i] for i in range(len(xVari))])
     else:
         vS = 0
