@@ -248,8 +248,16 @@ def DisplayResults(dataset: pd.DataFrame,c=0.025, rubric=False, n=1000, linear=F
     """
     rubricR, studentR, bootstrapR, countE, obs, param, AIC, BIC, McFadden, LR, ChiSquared, LogLikelihood = getResults(dataset, c, rubric, n, linear, columns=columns)
     warnings = []
-    printedStudent = studentR.merge(bootstrapR, on='Variable', how='left')
-    printedRubric = rubricR.merge(bootstrapR, on='Variable', how='left')
+    if rubric is True:
+        printedStudent = studentR.merge(bootstrapR, on='Variable', how='left')
+        if isinstance(columns, list) and len(columns) > 0:
+            specialbootstrap = bootstrapR[-len(columns):]
+            printedRubric = rubricR.merge(specialbootstrap, on='Variable', how='left')
+        else:
+            printedRubric = rubricR
+    else:
+        printedRubric = rubricR.merge(bootstrapR, on='Variable', how='left')
+        printedStudent = studentR
     print('Rubric Estimates:')
     print(printedRubric)
     print('Student Estimates:')
@@ -319,8 +327,18 @@ def SaveResults(dataset: pd.DataFrame,c=0.025, rubric=False, n=1000, linear=Fals
 
     """
     rubricR, studentR, bootstrapR, countE, obs, param, AIC, BIC, McFadden, LR, ChiSquared, LogLikelihood  = DisplayResults(dataset, c, rubric, n, linear, columns=columns)
-    printedStudent = studentR.merge(bootstrapR, on='Variable', how='left')
-    printedRubric = rubricR.merge(bootstrapR, on='Variable', how='left')
+
+    if rubric is True:
+        printedStudent = studentR.merge(bootstrapR, on='Variable', how='left')
+        if isinstance(columns, list) and len(columns) > 0:
+            specialbootstrap = bootstrapR[-len(columns):]
+            printedRubric = rubricR.merge(specialbootstrap, on='Variable', how='left')
+        else:
+            printedRubric = rubricR
+    else:
+        printedRubric = rubricR.merge(bootstrapR, on='Variable', how='left')
+        printedStudent = studentR
+
     printedRubric.to_csv(rubricFile, index=False)
     printedStudent.to_csv(studentFile, index=False)
     output = {
