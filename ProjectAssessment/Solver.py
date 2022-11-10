@@ -25,10 +25,7 @@ def opFunction(x, data, linear = False, cols = 0):
 def opRestricted (x, data, linear = False):
     return -1.0 * (np.array([ itemPb(x[0], 0, item[0], item[3], None, None, linear) for item in data ]).sum())
 
-def solve(dataset, summary = True, linear = False, colNames = None):
-    columns = [c.strip() for c in colNames] if isinstance(colNames, list) else []
-    if len(columns) > 0 and not set(columns).issubset(dataset.columns):
-        raise Exception('Specified columns not in dataset')
+def solve(dataset, summary = True, linear = False, columns = None):
     studentCode, uniqueStudents = pd.factorize(dataset['student'])
     questionCode, uniqueQuestion = pd.factorize(dataset['rubric'])
     questionCode = questionCode + uniqueStudents.size
@@ -81,7 +78,7 @@ def solve(dataset, summary = True, linear = False, colNames = None):
         return None
     raise Exception(minValue.message)
 
-def bootstrapRow (dataset, colNames, rubric=False, linear=False):
+def bootstrapRow (dataset, columns, rubric=False, linear=False):
     key = 'rubric' if rubric else 'student'
     ids = dataset[key].unique().flatten().tolist()
     randomGroupIds = np.random.choice(ids, size=len(ids), replace=True)
@@ -91,23 +88,23 @@ def bootstrapRow (dataset, colNames, rubric=False, linear=False):
         rows = rows.assign(rubric=c) if rubric else rows.assign(student=c)
         l.append(rows)
     resultData = pd.concat(l, ignore_index=True)
-    return solve(resultData, False, linear, colNames)
+    return solve(resultData, False, linear, columns)
 
 def CallRow(row):
     key = 'student' if row['rubric'] else 'rubric'
-    r = bootstrapRow(row['dataset'], row['colnames'], row['rubric'], row['linear'])
+    r = bootstrapRow(row['dataset'], row['columns'], row['rubric'], row['linear'])
     if r is not None:
         return (r[key], r['variables'])
     return None
 
-def bootstrap(dataset, n, rubric=False, linear=False, colNames=None):
+def bootstrap(dataset, n, rubric=False, linear=False, columns=None):
     l = []
     rows = [
         {
             'dataset': dataset,
             'rubric': rubric,
             'linear': linear,
-            'colnames': colNames
+            'columns': columns
         }
     ]*n
     b = Bar('Processing', max=n)
@@ -175,14 +172,17 @@ def getResults(dataset: pd.DataFrame,c=0.025, rubric=False, n=1000, linear=False
         raise Exception('rubric must be a boolean')
     if not isinstance(n, int) and n > 0:
         raise Exception('n must be an integer greater than 0')
+    columns = [c.strip() for c in columns] if isinstance(columns, list) else []
+    if len(columns) > 0 and not set(columns).issubset(dataset.columns):
+        raise Exception('Specified columns not in dataset')
     dataset.dropna(inplace=True)
     dataset = dataset[pd.to_numeric(dataset['k'], errors='coerce').notnull()]
     dataset = dataset[pd.to_numeric(dataset['bound'], errors='coerce').notnull()]
     if not len(dataset.index) > 0:
         raise Exception('Invalid pandas dataset, empty dataset.')
-    estimates = solve(dataset, linear=linear, colNames=columns)
+    estimates = solve(dataset, linear=linear, columns=columns)
     if estimates is not None:
-        results = bootstrap(dataset, n, rubric, linear=linear, colNames=columns)
+        results = bootstrap(dataset, n, rubric, linear=linear, columns=columns)
         r = results['results']
         l = []
         for var in r['Variable'].unique():
@@ -255,7 +255,10 @@ def DisplayResults(dataset: pd.DataFrame,c=0.025, rubric=False, n=1000, linear=F
     else:
         printedRubric = rubricR.merge(bootstrapR, on='Variable', how='left')
         printedStudent = studentR
-    print('Rubric Estimates:')
+    addedMes = ""
+    if isinstance(columns, list) and len(columns) > 0:
+        addedMes = " and Arbitrary Columns"
+    print('Rubric' + addedMes + ' Estimates:')
     print(printedRubric)
     print('Student Estimates:')
     print(printedStudent)
@@ -328,7 +331,7 @@ def SaveResults(dataset: pd.DataFrame,c=0.025, rubric=False, n=1000, linear=Fals
     if rubric is True:
         printedStudent = studentR.merge(bootstrapR, on='Variable', how='left')
         if isinstance(columns, list) and len(columns) > 0:
-            specialbootstrap = bootstrapR[-len(columns):]
+            specialbootstrap = bootstrapR[bootstrapR['Variable'].isin(columns)]
             printedRubric = rubricR.merge(specialbootstrap, on='Variable', how='left')
         else:
             printedRubric = rubricR
