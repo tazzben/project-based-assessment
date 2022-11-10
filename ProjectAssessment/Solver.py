@@ -12,7 +12,7 @@ from .Marginal import calculateMarginals
 
 def itemPb(q, s, k, b, xVari, itemi, linear = False):
     if xVari is not None and itemi is not None:
-        vS = sum([xVari[i] * itemi[i] for i in range(len(xVari))])
+        vS = np.dot(xVari, itemi)
     else:
         vS = 0
     if linear:

@@ -3,11 +3,11 @@ import pandas as pd
 from scipy.special import expit
 
 def probability(q, s, xEst, iItem, linear = False):
-    vS = sum([xEst[i] * iItem[i] for i in range(len(xEst))])
+    vS = np.dot(xEst, iItem)
     return q + s + vS if linear else expit(q + s + vS)
 
 def logisticD(q, s, xEst, iItem, question = False, student = False, xVal = 0):
-    vS = sum([xEst[i] * iItem[i] for i in range(len(xEst))])
+    vS = np.dot(xEst, iItem)
     if question:
         m = q
     elif student:
