@@ -11,22 +11,19 @@ from .MakeTable import MakeTwoByTwoTable
 from .Marginal import calculateMarginals
 
 def itemPb(q, s, k, b, xVari, itemi, linear = False):
-    if xVari is not None and itemi is not None:
-        vS = np.dot(xVari, itemi)
-    else:
-        vS = 0
+    vS = np.dot(xVari, itemi) if (xVari is not None and itemi is not None) else 0
     if linear:
         return xlogy(1, q + s + vS + (q + s + vS - 1) * np.ceil(-k/b)) + xlog1py(np.floor(k), -1*(q + s + vS))
     return  xlogy(1, expit(q + s + vS) + (expit(q + s + vS) - 1) * np.ceil(-k/b)) + xlog1py(np.floor(k), -1*expit(q + s + vS))
 
 def opFunction(x, data, linear = False, cols = 0):
     if cols > 0:
-        return -1.0 * (sum([ itemPb(x[item[2]], x[item[1]], item[0], item[3], x[-cols:], item[-cols:], linear) for item in data ]))
+        return -1.0 * (np.array([ itemPb(x[item[2]], x[item[1]], item[0], item[3], x[-cols:], item[-cols:], linear) for item in data ]).sum())
     else:
-        return -1.0 * (sum([ itemPb(x[item[2]], x[item[1]], item[0], item[3], None, None, linear) for item in data ]))
+        return -1.0 * (np.array([ itemPb(x[item[2]], x[item[1]], item[0], item[3], None, None, linear) for item in data ]).sum())
 
 def opRestricted (x, data, linear = False):
-    return -1.0 * (sum([ itemPb(x[0], 0, item[0], item[3], None, None, linear) for item in data ]))
+    return -1.0 * (np.array([ itemPb(x[0], 0, item[0], item[3], None, None, linear) for item in data ]).sum())
 
 def solve(dataset, summary = True, linear = False, colNames = None):
     columns = [c.strip() for c in colNames] if isinstance(colNames, list) else []
