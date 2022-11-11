@@ -10,20 +10,25 @@ from progress.bar import Bar
 from .MakeTable import MakeTwoByTwoTable
 from .Marginal import calculateMarginals
 
-def itemPb(q, s, k, b, xVari, itemi, linear = False):
-    vS = np.dot(xVari, itemi) if (xVari is not None and itemi is not None) else 0
+def itemPb2(q, s, k, b, xVari, itemi, linear = False):
+    vS = np.dot(xVari, itemi)
     if linear:
         return xlogy(1, q + s + vS + (q + s + vS - 1) * np.ceil(-k/b)) + xlog1py(np.floor(k), -1*(q + s + vS))
     return  xlogy(1, expit(q + s + vS) + (expit(q + s + vS) - 1) * np.ceil(-k/b)) + xlog1py(np.floor(k), -1*expit(q + s + vS))
 
+def itemPb(q, s, k, b, linear = False):
+    if linear:
+        return xlogy(1, q + s + (q + s - 1) * np.ceil(-k/b)) + xlog1py(np.floor(k), -1*(q + s))
+    return  xlogy(1, expit(q + s) + (expit(q + s) - 1) * np.ceil(-k/b)) + xlog1py(np.floor(k), -1*expit(q + s))
+
 def opFunction(x, data, linear = False, cols = 0):
     if cols > 0:
-        return -1.0 * (sum(( itemPb(x[item[2]], x[item[1]], item[0], item[3], x[-cols:], item[-cols:], linear) for item in data )))
+        return -1.0 * (sum(( itemPb2(x[item[2]], x[item[1]], item[0], item[3], x[-cols:], item[-cols:], linear) for item in data )))
     else:
-        return -1.0 * (sum(( itemPb(x[item[2]], x[item[1]], item[0], item[3], None, None, linear) for item in data )))
+        return -1.0 * (sum(( itemPb(x[item[2]], x[item[1]], item[0], item[3], linear) for item in data )))
 
 def opRestricted (x, data, linear = False):
-    return -1.0 * (sum(( itemPb(x[0], 0, item[0], item[3], None, None, linear) for item in data )))
+    return -1.0 * (sum(( itemPb(x[0], 0, item[0], item[3], linear) for item in data )))
 
 def solve(dataset, summary = True, linear = False, columns = None):
     studentCode, uniqueStudents = pd.factorize(dataset['student'])
