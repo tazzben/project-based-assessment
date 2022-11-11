@@ -18,12 +18,12 @@ def itemPb(q, s, k, b, xVari, itemi, linear = False):
 
 def opFunction(x, data, linear = False, cols = 0):
     if cols > 0:
-        return -1.0 * (np.array([ itemPb(x[item[2]], x[item[1]], item[0], item[3], x[-cols:], item[-cols:], linear) for item in data ]).sum())
+        return -1.0 * (sum(( itemPb(x[item[2]], x[item[1]], item[0], item[3], x[-cols:], item[-cols:], linear) for item in data )))
     else:
-        return -1.0 * (np.array([ itemPb(x[item[2]], x[item[1]], item[0], item[3], None, None, linear) for item in data ]).sum())
+        return -1.0 * (sum(( itemPb(x[item[2]], x[item[1]], item[0], item[3], None, None, linear) for item in data )))
 
 def opRestricted (x, data, linear = False):
-    return -1.0 * (np.array([ itemPb(x[0], 0, item[0], item[3], None, None, linear) for item in data ]).sum())
+    return -1.0 * (sum(( itemPb(x[0], 0, item[0], item[3], None, None, linear) for item in data )))
 
 def solve(dataset, summary = True, linear = False, columns = None):
     studentCode, uniqueStudents = pd.factorize(dataset['student'])
