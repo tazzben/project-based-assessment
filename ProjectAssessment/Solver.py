@@ -13,13 +13,13 @@ from .Marginal import calculateMarginals
 def itemPb2(q, s, k, b, xVari, itemi, linear = False):
     vS = np.dot(xVari, itemi)
     if linear:
-        return xlogy(1, q + s + vS + (q + s + vS - 1) * np.ceil(-k/b)) + xlog1py(np.floor(k), -1*(q + s + vS))
-    return  xlogy(1, expit(q + s + vS) + (expit(q + s + vS) - 1) * np.ceil(-k/b)) + xlog1py(np.floor(k), -1*expit(q + s + vS))
+        return xlogy(1, q + s + vS + (q + s + vS - 1) * math.ceil(-k/b)) + xlog1py(math.floor(k), -1*(q + s + vS))
+    return  xlogy(1, expit(q + s + vS) + (expit(q + s + vS) - 1) * math.ceil(-k/b)) + xlog1py(math.floor(k), -1*expit(q + s + vS))
 
 def itemPb(q, s, k, b, linear = False):
     if linear:
-        return xlogy(1, q + s + (q + s - 1) * np.ceil(-k/b)) + xlog1py(np.floor(k), -1*(q + s))
-    return  xlogy(1, expit(q + s) + (expit(q + s) - 1) * np.ceil(-k/b)) + xlog1py(np.floor(k), -1*expit(q + s))
+        return xlogy(1, q + s + (q + s - 1) * math.ceil(-k/b)) + xlog1py(math.floor(k), -1*(q + s))
+    return  xlogy(1, expit(q + s) + (expit(q + s) - 1) * math.ceil(-k/b)) + xlog1py(math.floor(k), -1*expit(q + s))
 
 def opFunction(x, data, linear = False, cols = 0):
     if cols > 0:
