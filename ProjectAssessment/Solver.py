@@ -30,15 +30,11 @@ def opFunction(x, data, linear = False, cols = 0):
 def opRestricted (x, data, linear = False):
     return -1.0 * (sum(( itemPb(x[0], 0, item[0], item[3], linear) for item in data )))
 
-def guessLookup(guess, data):
-    return [data.at[d] if d in data.index else 0 for d in guess]
-
-def solve(dataset, summary = True, linear = False, columns = None, initialGuess = None):
+def solve(dataset, summary = True, linear = False, columns = None):
     studentCode, uniqueStudents = pd.factorize(dataset['student'])
     questionCode, uniqueQuestion = pd.factorize(dataset['rubric'])
     questionCode = questionCode + uniqueStudents.size
     smap = np.concatenate((uniqueStudents, uniqueQuestion), axis=None).tolist()
-    varNames = smap + columns
     data = list(zip(dataset['k'].to_numpy().flatten().tolist(), studentCode.tolist(), questionCode.tolist(), dataset['bound'].to_numpy().flatten().tolist()))
     for i, _ in enumerate(data):
         for col in columns:
@@ -47,10 +43,10 @@ def solve(dataset, summary = True, linear = False, columns = None, initialGuess 
         bounds = [(0, 1)] * (uniqueStudents.size + uniqueQuestion.size + len(columns))
     else:
         bounds = None
-    iG = [1/(2*(1+dataset['k'].mean()))]*(len(varNames)) if initialGuess is None else guessLookup(varNames, initialGuess)
-    minValue = minimize(opFunction, iG, args=(data, linear, len(columns)), method='Powell', bounds=bounds)
+    minValue = minimize(opFunction, [1/(2*(1+dataset['k'].mean()))]*(len(smap) + len(columns)), args=(data, linear, len(columns)), method='Powell', bounds=bounds)
     if minValue.success:
         estX = minValue.x.flatten().tolist()
+        varNames = smap + columns
         fullResults = list(zip(varNames, estX))
         cols = ['Variable', 'Value']
         studentResults = pd.DataFrame(fullResults[:uniqueStudents.size], columns=cols)
@@ -66,8 +62,7 @@ def solve(dataset, summary = True, linear = False, columns = None, initialGuess 
         d = {
             'student': studentResults.join(studentMarginals),
             'rubric': questionResults.join(rubricMarginals),
-            'variables': varResults.join(varMarginals),
-            'full': pd.Series(estX, index=varNames)
+            'variables': varResults.join(varMarginals)
         }
         d['LogLikelihood'] = -1.0 * minValue.fun
         d['AIC'] = 2*(uniqueStudents.size+uniqueQuestion.size+len(columns))+2*minValue.fun
@@ -88,7 +83,7 @@ def solve(dataset, summary = True, linear = False, columns = None, initialGuess 
         return None
     raise Exception(minValue.message)
 
-def bootstrapRow (dataset, columns, rubric=False, linear=False, initialGuess=None):
+def bootstrapRow (dataset, columns, rubric=False, linear=False):
     key = 'rubric' if rubric else 'student'
     ids = dataset[key].unique().flatten().tolist()
     randomGroupIds = np.random.choice(ids, size=len(ids), replace=True)
@@ -98,24 +93,23 @@ def bootstrapRow (dataset, columns, rubric=False, linear=False, initialGuess=Non
         rows = rows.assign(rubric=c) if rubric else rows.assign(student=c)
         l.append(rows)
     resultData = pd.concat(l, ignore_index=True)
-    return solve(resultData, False, linear, columns, initialGuess)
+    return solve(resultData, False, linear, columns)
 
 def CallRow(row):
     key = 'student' if row['rubric'] else 'rubric'
-    r = bootstrapRow(row['dataset'], row['columns'], row['rubric'], row['linear'], row['initialGuess'])
+    r = bootstrapRow(row['dataset'], row['columns'], row['rubric'], row['linear'])
     if r is not None:
         return (r[key], r['variables'])
     return None
 
-def bootstrap(dataset, n, rubric=False, linear=False, columns=None, initialGuess=None):
+def bootstrap(dataset, n, rubric=False, linear=False, columns=None):
     l = []
     rows = [
         {
             'dataset': dataset,
             'rubric': rubric,
             'linear': linear,
-            'columns': columns,
-            'initialGuess': initialGuess
+            'columns': columns
         }
     ]*n
     b = Bar('Processing', max=n)
@@ -193,7 +187,7 @@ def getResults(dataset: pd.DataFrame,c=0.025, rubric=False, n=1000, linear=False
         raise Exception('Invalid pandas dataset, empty dataset.')
     estimates = solve(dataset, linear=linear, columns=columns)
     if estimates is not None:
-        results = bootstrap(dataset, n, rubric, linear=linear, columns=columns, initialGuess=estimates['full'])
+        results = bootstrap(dataset, n, rubric, linear=linear, columns=columns)
         r = results['results']
         l = []
         for var in r['Variable'].unique():
