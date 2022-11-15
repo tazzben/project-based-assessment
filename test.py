@@ -26,5 +26,13 @@ def main():
     df = pd.read_csv('data2.csv')
     pa.DisplayResults(df, rubric=True)
 
+    print("Dataset Two with Added Columns")
+    df = pd.read_csv('data2.csv')
+    pa.DisplayResults(df, columns=['t','d'])
+
+    print("Dataset Two with Added Columns with Rubric Bootstrapping")
+    df = pd.read_csv('data2.csv')
+    pa.DisplayResults(df, columns=['t','d'], rubric=True)
+
 if __name__ == '__main__':
     main()
