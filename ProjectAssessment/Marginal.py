@@ -16,7 +16,8 @@ def logisticD(q, s, xEst, iItem, question = False, student = False, xVal = 0):
         m = s
     else:
         m = xVal
-    return m * expit(q + s + vS)*(1 - expit(q + s + vS))
+    et = expit(q + s + vS)
+    return m * et*(1 - et)
 
 def linearD(q, s, question = False, student = False, xVal = 0):
     if question:
@@ -29,12 +30,14 @@ def probabilityDerivative(q, s, xEst, iItem, question = False, student = False, 
     return linearD(q, s, question, student, xVal) if linear else logisticD(q, s, xEst, iItem, question, student, xVal)
 
 def itemPb(q, s, k, b, xEst, iItem, linear = False):
-    return (probability(q, s, xEst, iItem, linear)+(probability(q, s, xEst, iItem, linear)-1)*math.ceil(-k/b))*(1-probability(q, s, xEst, iItem, linear))**(math.floor(k))
+    pb = probability(q, s, xEst, iItem, linear)
+    return (pb+(pb-1)*math.ceil(-k/b))*(1-pb)**(math.floor(k))
 
 def dItemPb(q, s, k, b, xEst, iItem, question = False, student = False, linear = False, xVal = 0):
     if k == 0:
         return probabilityDerivative(q, s, xEst, iItem, question, student, linear, xVal)
-    return probabilityDerivative(q, s, xEst, iItem, question, student, linear, xVal)*(-1*(1-probability(q, s, xEst, iItem, linear))**(math.floor(k)-1))*(-1*(math.floor(k)+1)*math.floor(k/b)*(probability(q, s, xEst, iItem, linear)-1)+(math.floor(k)+1)*probability(q, s, xEst, iItem, linear)-1)
+    pb = probability(q, s, xEst, iItem, linear)
+    return probabilityDerivative(q, s, xEst, iItem, question, student, linear, xVal)*(-1*(1-pb)**(math.floor(k)-1))*(-1*(math.floor(k)+1)*math.floor(k/b)*(pb-1)+(math.floor(k)+1)*pb-1)
 
 def calculateMarginal(position, data, estX, studentSize, questionSize, nCol, linear = False):
     question = True if (position >= studentSize and position < (studentSize + questionSize)) else False
