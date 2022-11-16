@@ -45,4 +45,17 @@ The rubric difficulty and student ability pandas dataframes return estimates alo
 ## Background and Use
 
 This package is based on the estimator presented in "[Assessing Proxies of Knowledge and Difficulty with Rubric-Based Instruments](https://dx.doi.org/10.2139/ssrn.4194935)."  There is a [video](https://vimeo.com/735183858) demonstrating using this package in Google Colab and a [video](https://vimeo.com/756447388) explaining the paper.   
+
+## Installation
+
+You can install the package from either PyPI or the Conda repository:
+
+```console
+pip install ProjectAssessment
+```
+or
+
+```console
+conda install -c tazzben projectassessment
+```
     
