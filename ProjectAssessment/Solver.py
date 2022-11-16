@@ -6,7 +6,7 @@ from scipy.optimize import minimize
 from scipy.stats import percentileofscore
 from scipy.stats.distributions import chi2
 from scipy.special import expit, xlog1py, xlogy
-from progress.bar import Bar
+from tqdm import tqdm
 from .MakeTable import MakeTwoByTwoTable
 from .Marginal import calculateMarginals
 
@@ -109,20 +109,17 @@ def bootstrap(dataset, n, rubric=False, linear=False, columns=None):
             'columns': columns
         }
     ]*n
-    b = Bar('Processing', max=n)
     p = Pool()
     nones = []
-    for _, result in enumerate(p.imap_unordered(CallRow, rows)):
+    for _, result in tqdm(enumerate(p.imap_unordered(CallRow, rows)), total=n):
         if result is not None:
             keyresult, varresult = result
             l.append(keyresult)
             l.append(varresult)
         else:
             nones.append(1)
-        b.next()
     p.close()
     p.join()
-    b.finish()
     return {
         'results': pd.concat(l, ignore_index=True),
         'nones': len(nones)
