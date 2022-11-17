@@ -1,4 +1,3 @@
-import math
 from multiprocessing import Pool
 import numpy as np
 import pandas as pd
@@ -66,7 +65,7 @@ def solve(dataset, summary = True, linear = False, columns = None):
         }
         d['LogLikelihood'] = -1.0 * minValue.fun
         d['AIC'] = 2*(uniqueStudents.size+uniqueQuestion.size+len(columns))+2*minValue.fun
-        d['BIC'] = (uniqueStudents.size+uniqueQuestion.size+len(columns))*math.log(len(studentCode))+2*minValue.fun
+        d['BIC'] = (uniqueStudents.size+uniqueQuestion.size+len(columns))*np.log(len(studentCode))+2*minValue.fun
         d['n'] = len(studentCode)
         d['NumberOfParameters'] = uniqueStudents.size+uniqueQuestion.size+len(columns)
         if linear:
