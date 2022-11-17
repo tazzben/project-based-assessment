@@ -10,13 +10,16 @@ from tqdm import tqdm
 from .MakeTable import MakeTwoByTwoTable
 from .Marginal import calculateMarginals
 
+def kbcom(k, b):
+    return -1 if k == b else 0
+
 def itemPb2(q, s, k, b, xVari, itemi, linear = False):
     vS = np.dot(xVari, itemi) + q + s if linear else expit(np.dot(xVari, itemi) + q + s)
-    return  xlogy(1, vS + (vS - 1) * math.ceil(-k/b)) + xlog1py(math.floor(k), -1*vS)
+    return  xlogy(1, vS + (vS - 1) * kbcom(k, b)) + xlog1py(k, -1*vS)
 
 def itemPb(q, s, k, b, linear = False):
     vS = q + s if linear else expit(q + s)
-    return  xlogy(1, vS + (vS - 1) * math.ceil(-k/b)) + xlog1py(math.floor(k), -1*vS)
+    return  xlogy(1, vS + (vS - 1) * kbcom(k, b)) + xlog1py(k, -1*vS)
 
 def opFunction(x, data, linear = False, cols = 0):
     if cols > 0:
@@ -125,6 +128,9 @@ def bootstrap(dataset, n, rubric=False, linear=False, columns=None):
         'nones': len(nones)
     }
 
+def compareKBound(x):
+    return pd.to_numeric(x, downcast='integer')
+
 def getResults(dataset: pd.DataFrame,c=0.025, rubric=False, n=1000, linear=False, columns=None):
     """
     Estimates the parameters of the model and produces confidence intervals for the estimates using a bootstrap method.
@@ -177,6 +183,8 @@ def getResults(dataset: pd.DataFrame,c=0.025, rubric=False, n=1000, linear=False
     dataset.dropna(inplace=True)
     dataset = dataset[pd.to_numeric(dataset['k'], errors='coerce').notnull()]
     dataset = dataset[pd.to_numeric(dataset['bound'], errors='coerce').notnull()]
+    dataset[["k", "bound"]] = dataset[["k", "bound"]].apply(compareKBound)
+    dataset = dataset[dataset['k'] <= dataset['bound']]
     if not len(dataset.index) > 0:
         raise Exception('Invalid pandas dataset, empty dataset.')
     estimates = solve(dataset, linear=linear, columns=columns)
