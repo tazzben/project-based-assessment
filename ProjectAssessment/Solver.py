@@ -14,20 +14,22 @@ def kbcom(k, b):
 
 def itemPb2(q, s, k, b, xVari, itemi, linear = False):
     vS = np.dot(xVari, itemi) + q + s if linear else expit(np.dot(xVari, itemi) + q + s)
-    return  xlogy(1, vS + (vS - 1) * kbcom(k, b)) + xlog1py(k, -1*vS)
+    return ( vS + (vS - 1) * kbcom(k, b), k, -1*vS )
 
 def itemPb(q, s, k, b, linear = False):
     vS = q + s if linear else expit(q + s)
-    return  xlogy(1, vS + (vS - 1) * kbcom(k, b)) + xlog1py(k, -1*vS)
+    return ( vS + (vS - 1) * kbcom(k, b), k, -1*vS )
 
 def opFunction(x, data, linear = False, cols = 0):
     if cols > 0:
-        return -1.0 * (sum(( itemPb2(x[item[2]], x[item[1]], item[0], item[3], x[-cols:], item[-cols:], linear) for item in data )))
+        dem = np.array([ itemPb2(x[item[2]], x[item[1]], item[0], item[3], x[-cols:], item[-cols:], linear) for item in data ])
     else:
-        return -1.0 * (sum(( itemPb(x[item[2]], x[item[1]], item[0], item[3], linear) for item in data )))
+        dem = np.array([ itemPb(x[item[2]], x[item[1]], item[0], item[3], linear) for item in data ])
+    return -1.0 * np.sum(xlogy(1, dem[:,0]) + xlog1py(dem[:,1], dem[:,2]))
 
 def opRestricted (x, data, linear = False):
-    return -1.0 * (sum(( itemPb(x[0], 0, item[0], item[3], linear) for item in data )))
+    dem = np.array([ itemPb(x[0], 0, item[0], item[3], linear) for item in data ])
+    return -1.0 * np.sum(xlogy(1, dem[:,0]) + xlog1py(dem[:,1], dem[:,2]))
 
 def solve(dataset, summary = True, linear = False, columns = None):
     studentCode, uniqueStudents = pd.factorize(dataset['student'])
