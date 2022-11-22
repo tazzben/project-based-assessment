@@ -12,24 +12,24 @@ from .Marginal import calculateMarginals
 def kbcom(k, b):
     return -1 if k == b else 0
 
-def itemPb2(q, s, k, b, xVari, itemi, linear = False):
-    vS = np.dot(xVari, itemi) + q + s if linear else expit(np.dot(xVari, itemi) + q + s)
-    return ( vS + (vS - 1) * kbcom(k, b), k, -1*vS )
+def itemPb2(q, s, k, b, xVari, itemi):
+    return ( np.dot(xVari, itemi) + q + s, k, kbcom(k, b))
 
-def itemPb(q, s, k, b, linear = False):
-    vS = q + s if linear else expit(q + s)
-    return ( vS + (vS - 1) * kbcom(k, b), k, -1*vS )
+def itemPb(q, s, k, b):
+    return ( q + s, k, kbcom(k, b))
 
 def opFunction(x, data, linear = False, cols = 0):
     if cols > 0:
-        dem = np.array([ itemPb2(x[item[2]], x[item[1]], item[0], item[3], x[-cols:], item[-cols:], linear) for item in data ])
+        dem = np.array([ itemPb2(x[item[2]], x[item[1]], item[0], item[3], x[-cols:], item[-cols:]) for item in data ])
     else:
-        dem = np.array([ itemPb(x[item[2]], x[item[1]], item[0], item[3], linear) for item in data ])
-    return -1.0 * np.sum(xlogy(1, dem[:,0]) + xlog1py(dem[:,1], dem[:,2]))
+        dem = np.array([ itemPb(x[item[2]], x[item[1]], item[0], item[3]) for item in data ])
+    vS = dem[:,0] if linear else expit(dem[:,0])
+    return -1.0 * np.sum(xlogy(1,  vS + (vS - 1) * dem[:,2]) + xlog1py(dem[:,1], -vS))
 
 def opRestricted (x, data, linear = False):
-    dem = np.array([ itemPb(x[0], 0, item[0], item[3], linear) for item in data ])
-    return -1.0 * np.sum(xlogy(1, dem[:,0]) + xlog1py(dem[:,1], dem[:,2]))
+    dem = np.array([ itemPb(x[0], 0, item[0], item[3]) for item in data ])
+    vS = dem[:,0] if linear else expit(dem[:,0])
+    return -1.0 * np.sum(xlogy(1,  vS + (vS - 1) * dem[:,2]) + xlog1py(dem[:,1], -vS))
 
 def solve(dataset, summary = True, linear = False, columns = None):
     studentCode, uniqueStudents = pd.factorize(dataset['student'])
