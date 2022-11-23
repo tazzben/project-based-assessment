@@ -6,23 +6,35 @@ from scipy.stats import percentileofscore
 from scipy.stats.distributions import chi2
 from scipy.special import expit, xlog1py, xlogy
 from tqdm import tqdm
+from numba import njit
 from .MakeTable import MakeTwoByTwoTable
 from .Marginal import calculateMarginals
 
+@njit
 def kbcom(k, b):
     return -1 if k == b else 0
 
+@njit
 def itemPb2(q, s, k, b, xVari, itemi):
-    return ( np.dot(xVari, itemi) + q + s, k, kbcom(k, b))
+    return ( np.dot(np.ascontiguousarray(xVari), np.ascontiguousarray(itemi)) + q + s, k, kbcom(k, b))
 
+@njit
 def itemPb(q, s, k, b):
     return ( q + s, k, kbcom(k, b))
 
+@njit
+def itemLoop2(x, data, cols = 0):
+    return [ itemPb2(x[int(item[2])], x[int(item[1])], item[0], item[3], x[-cols:], item[-cols:]) for item in data ]
+
+@njit
+def itemLoop(x, data):
+    return [ itemPb(x[int(item[2])], x[int(item[1])], item[0], item[3]) for item in data ]
+
 def opFunction(x, data, linear = False, cols = 0):
     if cols > 0:
-        dem = np.array([ itemPb2(x[item[2]], x[item[1]], item[0], item[3], x[-cols:], item[-cols:]) for item in data ])
+        dem = np.array(itemLoop2(x, data, cols))
     else:
-        dem = np.array([ itemPb(x[item[2]], x[item[1]], item[0], item[3]) for item in data ])
+        dem = np.array(itemLoop(x, data))
     vS = dem[:,0] if linear else expit(dem[:,0])
     return -1.0 * np.sum(xlogy(1,  vS + (vS - 1) * dem[:,2]) + xlog1py(dem[:,1], -vS))
 
@@ -44,7 +56,7 @@ def solve(dataset, summary = True, linear = False, columns = None):
         bounds = [(0, 1)] * (uniqueStudents.size + uniqueQuestion.size + len(columns))
     else:
         bounds = None
-    minValue = minimize(opFunction, [1/(2*(1+dataset['k'].mean()))]*(len(smap) + len(columns)), args=(data, linear, len(columns)), method='Powell', bounds=bounds)
+    minValue = minimize(opFunction, [1/(2*(1+dataset['k'].mean()))]*(len(smap) + len(columns)), args=(np.array(data), linear, len(columns)), method='Powell', bounds=bounds)
     if minValue.success:
         estX = minValue.x.flatten().tolist()
         varNames = smap + columns
