@@ -10,7 +10,7 @@ setup(
         'numpy>=1.21.0',
         'pandas>=1.3.0',
         'tqdm',
-        'numba>=0.54.0',
+        'numba>=0.56.0',
         'scipy>=1.4.0',
     ],
     author='Ben Smith',
