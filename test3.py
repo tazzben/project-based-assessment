@@ -14,5 +14,13 @@ def main():
     df = pd.read_csv('data2.csv')
     pa.DisplayResults(df, columns=['t','d'], linear=True)
 
+    print("Dataset Two with Added Columns")
+    df = pd.read_csv('data2.csv')
+    pa.DisplayResults(df, columns=['d',])
+
+    print("Dataset Two with Added Columns in Linear Model")
+    df = pd.read_csv('data2.csv')
+    pa.DisplayResults(df, columns=['t',], linear=True)
+
 if __name__ == '__main__':
     main()

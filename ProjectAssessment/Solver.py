@@ -56,7 +56,7 @@ def solve(dataset, summary = True, linear = False, columns = None):
         bounds = [(0, 1)] * (uniqueStudents.size + uniqueQuestion.size + len(columns))
     else:
         bounds = None
-    minValue = minimize(opFunction, [1/(2*(1+dataset['k'].mean()))]*(len(smap) + len(columns)), args=(np.array(data), linear, len(columns)), method='Powell', bounds=bounds)
+    minValue = minimize(opFunction, np.array([1/(2*(1+dataset['k'].mean()))]*(len(smap) + len(columns)), np.dtype(float)), args=(np.array(data, np.dtype(float)), linear, len(columns)), method='Powell', bounds=bounds)
     if minValue.success:
         estX = minValue.x.flatten().tolist()
         varNames = smap + columns
