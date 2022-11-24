@@ -30,6 +30,10 @@ def itemLoop2(x, data, cols = 0):
 def itemLoop(x, data):
     return [ itemPb(x[int(item[2])], x[int(item[1])], item[0], item[3]) for item in data ]
 
+@njit
+def itemLoopRestricted(x, data):
+    return [ ( x[0], item[0], kbcom(item[0], item[3])) for item in data ]
+
 def opFunction(x, data, linear = False, cols = 0):
     if cols > 0:
         dem = np.array(itemLoop2(x, data, cols))
@@ -39,7 +43,7 @@ def opFunction(x, data, linear = False, cols = 0):
     return -1.0 * np.sum(xlogy(1,  vS + (vS - 1) * dem[:,2]) + xlog1py(dem[:,1], -vS))
 
 def opRestricted (x, data, linear = False):
-    dem = np.array([ itemPb(x[0], 0, item[0], item[3]) for item in data ])
+    dem = np.array(itemLoopRestricted(x, data))
     vS = dem[:,0] if linear else expit(dem[:,0])
     return -1.0 * np.sum(xlogy(1,  vS + (vS - 1) * dem[:,2]) + xlog1py(dem[:,1], -vS))
 
@@ -86,7 +90,7 @@ def solve(dataset, summary = True, linear = False, columns = None):
             boundsSingle = [(0, 1)]
         else:
             boundsSingle = None
-        minRestricted = minimize(opRestricted, [1/(1+dataset['k'].mean()),], args=(data, linear), method='Powell', bounds=boundsSingle)
+        minRestricted = minimize(opRestricted, np.array([1/(1+dataset['k'].mean()),], np.dtype(float)), args=(np.array(data, np.dtype(float)), linear), method='Powell', bounds=boundsSingle)
         if minRestricted.success:
             d['McFadden'] = 1 - minValue.fun/minRestricted.fun
             d['LR'] = -2*(-1*minRestricted.fun+minValue.fun)
@@ -161,7 +165,7 @@ def getResults(dataset: pd.DataFrame,c=0.025, rubric=False, n=1000, linear=False
     linear: bool
         Uses a simple linear combination of the rubric and student items instead of a sigmoid function.  Defaults to False.
     columns: list
-        A list of column names to include in the model.  Defaults to None.
+        A list of column names to include in the model.  The column names cannot be in common with any of the rubric row identifiers.  Defaults to None.
 
     Returns:
         Tuple:
@@ -245,7 +249,7 @@ def DisplayResults(dataset: pd.DataFrame,c=0.025, rubric=False, n=1000, linear=F
     linear: bool
         Uses a simple linear combination of the rubric and student items instead of a sigmoid function.  Defaults to False.
     columns: list
-        A list of column names to include in the model.  Defaults to None.
+        A list of column names to include in the model. The column names cannot be in common with any of the rubric row identifiers. Defaults to None.
 
     Returns:
         Tuple:
@@ -328,7 +332,7 @@ def SaveResults(dataset: pd.DataFrame,c=0.025, rubric=False, n=1000, linear=Fals
     outputFile : str
         File name/path for the summary output results.  Defaults to 'output.csv'.
     columns: list
-        A list of column names to include in the model.  Defaults to None.
+        A list of column names to include in the model. The column names cannot be in common with any of the rubric row identifiers. Defaults to None.
 
     Returns:
         Tuple:
