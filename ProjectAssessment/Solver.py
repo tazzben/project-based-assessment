@@ -57,10 +57,10 @@ def solve(dataset, summary = True, linear = False, columns = None):
         for col in columns:
             data[i] = data[i] + (dataset[col].iloc[i],)
     if linear:
-        bounds = [(0, 1)] * (uniqueStudents.size + uniqueQuestion.size + len(columns))
+        bounds = ((0, 1),) * (uniqueStudents.size + uniqueQuestion.size + len(columns))
     else:
         bounds = None
-    minValue = minimize(opFunction, np.array([1/(2*(1+dataset['k'].mean()))]*(len(smap) + len(columns)), np.dtype(float)), args=(np.array(data, np.dtype(float)), linear, len(columns)), method='Powell', bounds=bounds)
+    minValue = minimize(opFunction, np.array((1/(2*(1+dataset['k'].mean())),)*(len(smap) + len(columns)), np.dtype(float)), args=(np.array(data, np.dtype(float)), linear, len(columns)), method='Powell', bounds=bounds)
     if minValue.success:
         estX = minValue.x.flatten().tolist()
         varNames = smap + columns
@@ -87,10 +87,10 @@ def solve(dataset, summary = True, linear = False, columns = None):
         d['n'] = len(studentCode)
         d['NumberOfParameters'] = uniqueStudents.size+uniqueQuestion.size+len(columns)
         if linear:
-            boundsSingle = [(0, 1)]
+            boundsSingle = ((0, 1),)
         else:
             boundsSingle = None
-        minRestricted = minimize(opRestricted, np.array([1/(1+dataset['k'].mean()),], np.dtype(float)), args=(np.array(data, np.dtype(float)), linear), method='Powell', bounds=boundsSingle)
+        minRestricted = minimize(opRestricted, np.array((1/(1+dataset['k'].mean()),), np.dtype(float)), args=(np.array(data, np.dtype(float)), linear), method='Powell', bounds=boundsSingle)
         if minRestricted.success:
             d['McFadden'] = 1 - minValue.fun/minRestricted.fun
             d['LR'] = -2*(-1*minRestricted.fun+minValue.fun)
@@ -194,7 +194,7 @@ def getResults(dataset: pd.DataFrame,c=0.025, rubric=False, n=1000, linear=False
         raise Exception('rubric must be a boolean')
     if not isinstance(n, int) and n > 0:
         raise Exception('n must be an integer greater than 0')
-    columns = [c.strip() for c in columns] if isinstance(columns, list) else []
+    columns = [c.strip() for c in columns] if isinstance(columns, (list, tuple)) else []
     if len(columns) > 0 and not set(columns).issubset(dataset.columns):
         raise Exception('Specified columns not in dataset')
     dataset.dropna(inplace=True)
@@ -204,7 +204,9 @@ def getResults(dataset: pd.DataFrame,c=0.025, rubric=False, n=1000, linear=False
     dataset = dataset[dataset['k'] <= dataset['bound']]
     if not len(dataset.index) > 0:
         raise Exception('Invalid pandas dataset, empty dataset.')
+    print("Estimating Parameters ...")
     estimates = solve(dataset, linear=linear, columns=columns)
+    print("... Done. Bootstrapping ...")
     if estimates is not None:
         results = bootstrap(dataset, n, rubric, linear=linear, columns=columns)
         r = results['results']
