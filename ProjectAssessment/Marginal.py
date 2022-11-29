@@ -7,6 +7,19 @@ def probability(q, s, xEst, iItem, linear = False):
     vS = np.dot(xEst, iItem) if len(xEst) > 0 else 0
     return q + s + vS if linear else expit(q + s + vS)
 
+def mLogisticD(q, s, xEst, iItem, xPosition, question = False, student = False):
+    probabilityWith = probability(q, s, xEst, iItem, False)
+    xNew = xEst.copy()
+    qN, sN = q, s
+    if question:
+        qN = 0
+    elif student:
+        sN = 0
+    else:
+        xNew[xPosition] = 0
+    probabilityWithout = probability(qN, sN, xNew, iItem, False)
+    return probabilityWith - probabilityWithout
+
 def logisticD(q, s, xEst, iItem, question = False, student = False, xVal = 0):
     vS = np.dot(xEst, iItem) if len(xEst) > 0 else 0
     if question:
@@ -45,7 +58,7 @@ def calculateMarginal(position, data, estX, studentSize, questionSize, nCol, lin
     question = True if (position >= studentSize and position < (studentSize + questionSize)) else False
     student = True if position < studentSize else False
     xVarEst = estX[-nCol:] if nCol > 0 else []
-    xVarPos = (studentSize + questionSize) - position - 1 if not (student or question) else 0
+    xVarPos = position - (studentSize + questionSize + nCol) if not (student or question) else 0
     xest = xVarEst[xVarPos] if len(xVarEst) > 0 else 0
     if student or question:
         subData = [x for x in data if position == x[2]] if question else [x for x in data if position == x[1]]
@@ -56,6 +69,7 @@ def calculateMarginal(position, data, estX, studentSize, questionSize, nCol, lin
     if not linear:
         r['Average Logistic'] = [ mean(( probability(estX[x[2]], estX[x[1]], xVarEst, x[-nCol:], linear) for x in subData)) ]
         r['Average Marginal Logistic'] = [ mean(( logisticD(estX[x[2]], estX[x[1]], xVarEst, x[-nCol:], question, student, xest) for x in subData)) ]
+        r['Average Discrete Marginal Logistic'] = [ mean(( mLogisticD(estX[x[2]], estX[x[1]], xVarEst, x[-nCol:], xVarPos, question, student) for x in subData)) ]
     for b in range(0, minB+1):
         r["ACP k=" + str(b)] = [ mean(( itemPb(estX[x[2]], estX[x[1]], b, minB, xVarEst, x[-nCol:], linear) for x in subData )) ]
     for b in range(0, minB+1):
