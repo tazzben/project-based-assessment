@@ -202,6 +202,12 @@ def getResults(dataset: pd.DataFrame,c=0.025, rubric=False, n=1000, linear=False
     dataset = dataset[pd.to_numeric(dataset['bound'], errors='coerce').notnull()]
     dataset[["k", "bound"]] = dataset[["k", "bound"]].apply(compareKBound)
     dataset = dataset[dataset['k'] <= dataset['bound']]
+    if len(columns) > 0:
+        for spec in columns:
+            dataset = dataset[pd.to_numeric(dataset[spec], errors='coerce').notnull()]
+        dataset[columns] = dataset[columns].apply(pd.to_numeric)
+        if set(columns).intersection(set(dataset['rubric'].unique())):
+            raise Exception('Specified columns cannot be in common with any of the rubric row identifiers.')
     if not len(dataset.index) > 0:
         raise Exception('Invalid pandas dataset, empty dataset.')
     print("Estimating Parameters ...")
