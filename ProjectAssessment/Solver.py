@@ -40,12 +40,12 @@ def opFunction(x, data, linear = False, cols = 0):
     else:
         dem = np.array(itemLoop(x, data))
     vS = dem[:,0] if linear else expit(dem[:,0])
-    return -1.0 * np.sum(xlogy(1,  vS + (vS - 1) * dem[:,2]) + xlog1py(dem[:,1], -vS))
+    return -np.sum(xlogy(1,  vS + (vS - 1) * dem[:,2]) + xlog1py(dem[:,1], -vS))
 
 def opRestricted (x, data, linear = False):
     dem = np.array(itemLoopRestricted(x, data))
     vS = dem[:,0] if linear else expit(dem[:,0])
-    return -1.0 * np.sum(xlogy(1,  vS + (vS - 1) * dem[:,2]) + xlog1py(dem[:,1], -vS))
+    return -np.sum(xlogy(1,  vS + (vS - 1) * dem[:,2]) + xlog1py(dem[:,1], -vS))
 
 def solve(dataset, summary = True, linear = False, columns = None):
     studentCode, uniqueStudents = pd.factorize(dataset['student'])
@@ -155,7 +155,7 @@ def getResults(dataset: pd.DataFrame,c=0.025, rubric=False, n=1000, linear=False
     Parameters:
     -----------
     dataset : Pandas DataFrame
-        A dataframe with the following columns: k, student, rubric, bound.  Student and rubric identifiers for the student and rubric items.  Bound is maximum bin in the rubric that can be reached.  k is the bin the bin the student reached on a given rubric item.
+        A dataframe with the following columns: k, student, rubric, bound.  Student and rubric identifiers for the student and rubric items.  Bound is maximum bin in the rubric that can be reached.  k is the bin the student reached on a given rubric item.
     c : float
         Confidence level for the confidence intervals.  Defaults to 0.025.
     rubric : bool
@@ -247,7 +247,7 @@ def DisplayResults(dataset: pd.DataFrame,c=0.025, rubric=False, n=1000, linear=F
     Parameters:
     -----------
     dataset : Pandas DataFrame
-        A dataframe with the following columns: k, student, rubric, bound.  Student and rubric identifiers for the student and rubric items.  Bound is maximum bin in the rubric that can be reached.  k is the bin the bin the student reached on a given rubric item.
+        A dataframe with the following columns: k, student, rubric, bound.  Student and rubric identifiers for the student and rubric items.  Bound is maximum bin in the rubric that can be reached.  k is the bin the student reached on a given rubric item.
     c : float
         Confidence level for the confidence intervals.  Defaults to 0.025.
     rubric : bool
@@ -324,7 +324,7 @@ def SaveResults(dataset: pd.DataFrame,c=0.025, rubric=False, n=1000, linear=Fals
     Parameters:
     -----------
     dataset : Pandas DataFrame
-        A dataframe with the following columns: k, student, rubric, bound.  Student and rubric identifiers for the student and rubric items.  Bound is maximum bin in the rubric that can be reached.  k is the bin the bin the student reached on a given rubric item.
+        A dataframe with the following columns: k, student, rubric, bound.  Student and rubric identifiers for the student and rubric items.  Bound is maximum bin in the rubric that can be reached.  k is the bin the student reached on a given rubric item.
     c : float
         Confidence level for the confidence intervals.  Defaults to 0.025.
     rubric : bool
