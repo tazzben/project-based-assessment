@@ -42,5 +42,37 @@ def main():
     df = pd.read_csv('data2.csv')
     pa.DisplayResults(df, columns=['t','d'], rubric=True)
 
+    print("Dataset Two with Added Columns with no_s on")
+    df = pd.read_csv('data2.csv')
+    pa.DisplayResults(df, columns=['t','d'], no_students=True)
+
+    print("Dataset Two with Added Columns with no_q on")
+    df = pd.read_csv('data2.csv')
+    pa.DisplayResults(df, columns=['t','d'], no_questions=True)
+
+    print("Dataset Two with Added Columns with no_s and no_q on")
+    df = pd.read_csv('data2.csv')
+    pa.DisplayResults(df, columns=['t','d'], no_students=True, no_questions=True)
+
+    print("Dataset Two with Added Columns with no_s and no_q on and rubric bootstrapping")
+    df = pd.read_csv('data2.csv')
+    pa.DisplayResults(df, columns=['t','d'], no_students=True, no_questions=True, rubric=True)
+
+    print("Dataset Two with Added Columns with no_s on - Linear Model")
+    df = pd.read_csv('data2.csv')
+    pa.DisplayResults(df, columns=['t','d'], no_students=True, linear=True)
+
+    print("Dataset Two with Added Columns with no_q on - Linear Model")
+    df = pd.read_csv('data2.csv')
+    pa.DisplayResults(df, columns=['t','d'], no_questions=True, linear=True)
+
+    print("Dataset Two with Added Columns with no_s and no_q on - Linear Model")
+    df = pd.read_csv('data2.csv')
+    pa.DisplayResults(df, columns=['t','d'], no_students=True, no_questions=True, linear=True)
+
+    print("Dataset Two with Added Columns with no_s and no_q on and rubric bootstrapping - Linear Model")
+    df = pd.read_csv('data2.csv')   
+    pa.DisplayResults(df, columns=['t','d'], no_students=True, no_questions=True, rubric=True, linear=True)
+
 if __name__ == '__main__':
     main()

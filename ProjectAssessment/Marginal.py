@@ -54,6 +54,11 @@ def dItemPb(q, s, k, b, xEst, iItem, question = False, student = False, linear =
     pb = probability(q, s, xEst, iItem, linear)
     return probabilityDerivative(q, s, xEst, iItem, question, student, linear, xVal)*(-1*(1-pb)**(k-1))*(-1*(k+1)*kbcom(k, b)*(-1)*(pb-1)+(k+1)*pb-1)
 
+def makeZero(estX, x, p, size):
+    if size > 0:
+        return estX[x[p]]
+    return 0
+
 def calculateMarginal(position, data, estX, studentSize, questionSize, nCol, linear = False):
     question = True if (position >= studentSize and position < (studentSize + questionSize)) else False
     student = True if position < studentSize else False
@@ -67,18 +72,24 @@ def calculateMarginal(position, data, estX, studentSize, questionSize, nCol, lin
     minB = min((x[3] for x in subData))
     r = {}
     if not linear:
-        r['Average Logistic'] = [ mean(( probability(estX[x[2]], estX[x[1]], xVarEst, x[-nCol:], linear) for x in subData)) ]
-        r['Average Marginal Logistic'] = [ mean(( logisticD(estX[x[2]], estX[x[1]], xVarEst, x[-nCol:], question, student, xest) for x in subData)) ]
-        r['Average Discrete Marginal Logistic'] = [ mean(( mLogisticD(estX[x[2]], estX[x[1]], xVarEst, x[-nCol:], xVarPos, question, student) for x in subData)) ]
+        r['Average Logistic'] = [ mean(( probability(makeZero(estX, x, 2, questionSize), makeZero(estX, x, 1, studentSize), xVarEst, x[-nCol:], linear) for x in subData)) ]
+        r['Average Marginal Logistic'] = [ mean(( logisticD(makeZero(estX, x, 2, questionSize), makeZero(estX, x, 1, studentSize), xVarEst, x[-nCol:], question, student, xest) for x in subData)) ]
+        r['Average Discrete Marginal Logistic'] = [ mean(( mLogisticD(makeZero(estX, x, 2, questionSize), makeZero(estX, x, 1, studentSize), xVarEst, x[-nCol:], xVarPos, question, student) for x in subData)) ]
     for b in range(0, minB+1):
-        r["ACP k=" + str(b)] = [ mean(( itemPb(estX[x[2]], estX[x[1]], b, minB, xVarEst, x[-nCol:], linear) for x in subData )) ]
+        r["ACP k=" + str(b)] = [ mean(( itemPb(makeZero(estX, x, 2, questionSize), makeZero(estX, x, 1, studentSize), b, minB, xVarEst, x[-nCol:], linear) for x in subData )) ]
     for b in range(0, minB+1):
-        r["AME k=" + str(b)] = [ mean(( dItemPb(estX[x[2]], estX[x[1]], b, minB, xVarEst, x[-nCol:], question, student, linear, xest) for x in subData )) ]
+        r["AME k=" + str(b)] = [ mean(( dItemPb(makeZero(estX, x, 2, questionSize), makeZero(estX, x, 1, studentSize), b, minB, xVarEst, x[-nCol:], question, student, linear, xest) for x in subData )) ]
     return pd.DataFrame(r)
 
 def calculateMarginals(data, estX, studentSize, questionSize, nCol, linear = False):
-    studentResults = pd.concat([ calculateMarginal(x, data, estX, studentSize, questionSize, nCol, linear) for x in range(0, studentSize)], ignore_index=True)
-    rubricResults = pd.concat([ calculateMarginal(x, data, estX, studentSize, questionSize, nCol, linear) for x in range(studentSize, studentSize + questionSize)], ignore_index=True)
+    if studentSize > 0:
+        studentResults = pd.concat([ calculateMarginal(x, data, estX, studentSize, questionSize, nCol, linear) for x in range(0, studentSize)], ignore_index=True)
+    else:
+        studentResults = pd.DataFrame()
+    if questionSize > 0:
+        rubricResults = pd.concat([ calculateMarginal(x, data, estX, studentSize, questionSize, nCol, linear) for x in range(studentSize, studentSize + questionSize)], ignore_index=True)
+    else:
+        rubricResults = pd.DataFrame()
     if nCol > 0:
         varResults = pd.concat([ calculateMarginal(x, data, estX, studentSize, questionSize, nCol, linear) for x in range(studentSize + questionSize, len(estX))], ignore_index=True)
     else:

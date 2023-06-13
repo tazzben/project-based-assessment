@@ -16,6 +16,12 @@ def kbcom(k, b):
 
 @njit
 def itemPb2(q, s, k, b, xVari, itemi):
+    if q == 0 and s == 0:
+        return ( np.dot(np.ascontiguousarray(xVari), np.ascontiguousarray(itemi)), k, kbcom(k, b))
+    if q == 0:
+        return ( np.dot(np.ascontiguousarray(xVari), np.ascontiguousarray(itemi)) + s, k, kbcom(k, b))
+    if s == 0:
+        return ( np.dot(np.ascontiguousarray(xVari), np.ascontiguousarray(itemi)) + q, k, kbcom(k, b))
     return ( np.dot(np.ascontiguousarray(xVari), np.ascontiguousarray(itemi)) + q + s, k, kbcom(k, b))
 
 @njit
@@ -23,7 +29,13 @@ def itemPb(q, s, k, b):
     return ( q + s, k, kbcom(k, b))
 
 @njit
-def itemLoop2(x, data, cols = 0):
+def itemLoop2(x, data, cols = 0, no_q = False, no_s = False):
+    if no_q and no_s:
+        return [ itemPb2(0, 0, item[0], item[3], x[-cols:], item[-cols:]) for item in data ]
+    if no_q:
+        return [ itemPb2(0, x[int(item[1])], item[0], item[3], x[-cols:], item[-cols:]) for item in data ]
+    if no_s:
+        return [ itemPb2(x[int(item[2])], 0, item[0], item[3], x[-cols:], item[-cols:]) for item in data ]
     return [ itemPb2(x[int(item[2])], x[int(item[1])], item[0], item[3], x[-cols:], item[-cols:]) for item in data ]
 
 @njit
@@ -34,9 +46,9 @@ def itemLoop(x, data):
 def itemLoopRestricted(x, data):
     return [ ( x[0], item[0], kbcom(item[0], item[3])) for item in data ]
 
-def opFunction(x, data, linear = False, cols = 0):
+def opFunction(x, data, linear = False, cols = 0, no_q = False, no_s = False):
     if cols > 0:
-        dem = np.array(itemLoop2(x, data, cols))
+        dem = np.array(itemLoop2(x, data, cols, no_q, no_s))
     else:
         dem = np.array(itemLoop(x, data))
     vS = dem[:,0] if linear else expit(dem[:,0])
@@ -47,45 +59,73 @@ def opRestricted (x, data, linear = False):
     vS = dem[:,0] if linear else expit(dem[:,0])
     return -np.sum(xlogy(1,  vS + (vS - 1) * dem[:,2]) + xlog1py(dem[:,1], -vS))
 
-def solve(dataset, summary = True, linear = False, columns = None):
+def solve(dataset, summary = True, linear = False, columns = None, no_q = False, no_s = False):
     studentCode, uniqueStudents = pd.factorize(dataset['student'])
     questionCode, uniqueQuestion = pd.factorize(dataset['rubric'])
-    questionCode = questionCode + uniqueStudents.size
-    smap = np.concatenate((uniqueStudents, uniqueQuestion), axis=None).tolist()
+    if no_q and no_s:
+        smap = []
+    elif no_q:
+        smap = uniqueStudents.tolist()
+    elif no_s:
+        smap = uniqueQuestion.tolist()
+    else:
+        questionCode = questionCode + uniqueStudents.size
+        smap = np.concatenate((uniqueStudents, uniqueQuestion), axis=None).tolist()
     data = list(zip(dataset['k'].to_numpy().flatten().tolist(), studentCode.tolist(), questionCode.tolist(), dataset['bound'].to_numpy().flatten().tolist()))
     for i, _ in enumerate(data):
         for col in columns:
             data[i] = data[i] + (dataset[col].iloc[i],)
     if linear:
-        bounds = ((0, 1),) * (uniqueStudents.size + uniqueQuestion.size + len(columns))
+        if no_q and no_s:
+            bounds = ((0, 1),) * len(columns)
+        elif no_q:
+            bounds = ((0, 1),) * (uniqueStudents.size + len(columns))
+        elif no_s:
+            bounds = ((0, 1),) * (uniqueQuestion.size + len(columns))
+        else:
+            bounds = ((0, 1),) * (uniqueStudents.size + uniqueQuestion.size + len(columns))
     else:
         bounds = None
-    minValue = minimize(opFunction, np.array((1/(2*(1+dataset['k'].mean())),)*(len(smap) + len(columns)), np.dtype(float)), args=(np.array(data, np.dtype(float)), linear, len(columns)), method='Powell', bounds=bounds)
+    minValue = minimize(opFunction, np.array((1/(2*(1+dataset['k'].mean())),)*(len(smap) + len(columns)), np.dtype(float)), args=(np.array(data, np.dtype(float)), linear, len(columns), no_q, no_s), method='Powell', bounds=bounds)
     if minValue.success:
         estX = minValue.x.flatten().tolist()
         varNames = smap + columns
         fullResults = list(zip(varNames, estX))
         cols = ['Variable', 'Value']
-        studentResults = pd.DataFrame(fullResults[:uniqueStudents.size], columns=cols)
-        questionResults = pd.DataFrame(fullResults[uniqueStudents.size:len(smap)], columns=cols)
-        varResults = pd.DataFrame(fullResults[len(smap):], columns=cols)
+        if no_q and no_s:
+            studentResults = pd.DataFrame(columns=cols)
+            questionResults = pd.DataFrame(columns=cols)
+            varResults = pd.DataFrame(fullResults, columns=cols)
+        elif no_q:
+            studentResults = pd.DataFrame(fullResults[:uniqueStudents.size], columns=cols)
+            questionResults = pd.DataFrame(columns=cols)
+            varResults = pd.DataFrame(fullResults[uniqueStudents.size:], columns=cols)
+        elif no_s:
+            studentResults = pd.DataFrame(columns=cols)
+            questionResults = pd.DataFrame(fullResults[:uniqueQuestion.size], columns=cols)
+            varResults = pd.DataFrame(fullResults[uniqueQuestion.size:], columns=cols)
+        else:
+            studentResults = pd.DataFrame(fullResults[:uniqueStudents.size], columns=cols)
+            questionResults = pd.DataFrame(fullResults[uniqueStudents.size:len(smap)], columns=cols)
+            varResults = pd.DataFrame(fullResults[len(smap):], columns=cols)
         if not summary:
             return {
                 'student': studentResults,
                 'rubric': questionResults,
                 'variables': varResults
             }
-        studentMarginals, rubricMarginals, varMarginals = calculateMarginals(data, estX, uniqueStudents.size, uniqueQuestion.size, len(columns), linear)
+        parStudents, parQuestion, parVar = (len(studentResults.index), len(questionResults.index), len(varResults.index))
+        studentMarginals, rubricMarginals, varMarginals = calculateMarginals(data, estX, parStudents, parQuestion, parVar, linear)
         d = {
             'student': studentResults.join(studentMarginals),
             'rubric': questionResults.join(rubricMarginals),
             'variables': varResults.join(varMarginals)
         }
         d['LogLikelihood'] = -1.0 * minValue.fun
-        d['AIC'] = 2*(uniqueStudents.size+uniqueQuestion.size+len(columns))+2*minValue.fun
-        d['BIC'] = (uniqueStudents.size+uniqueQuestion.size+len(columns))*np.log(len(studentCode))+2*minValue.fun
+        d['AIC'] = 2*(parStudents + parQuestion + parVar)+2*minValue.fun
+        d['BIC'] = (parStudents + parQuestion + parVar)*np.log(len(studentCode))+2*minValue.fun
         d['n'] = len(studentCode)
-        d['NumberOfParameters'] = uniqueStudents.size+uniqueQuestion.size+len(columns)
+        d['NumberOfParameters'] = parStudents + parQuestion + parVar
         if linear:
             boundsSingle = ((0, 1),)
         else:
@@ -94,13 +134,13 @@ def solve(dataset, summary = True, linear = False, columns = None):
         if minRestricted.success:
             d['McFadden'] = 1 - minValue.fun/minRestricted.fun
             d['LR'] = -2*(-1*minRestricted.fun+minValue.fun)
-            d['Chi-Squared'] = chi2.sf(d['LR'], (uniqueStudents.size+uniqueQuestion.size+len(columns)-1))
+            d['Chi-Squared'] = chi2.sf(d['LR'], (parStudents + parQuestion + parVar - 1))
         return d
     if not summary:
         return None
     raise Exception(minValue.message)
 
-def bootstrapRow (dataset, columns, rubric=False, linear=False):
+def bootstrapRow (dataset, columns, rubric=False, linear=False, no_q = False, no_s = False):
     key = 'rubric' if rubric else 'student'
     ids = dataset[key].unique().flatten().tolist()
     randomGroupIds = np.random.choice(ids, size=len(ids), replace=True)
@@ -110,23 +150,25 @@ def bootstrapRow (dataset, columns, rubric=False, linear=False):
         rows = rows.assign(rubric=c) if rubric else rows.assign(student=c)
         l.append(rows)
     resultData = pd.concat(l, ignore_index=True)
-    return solve(resultData, False, linear, columns)
+    return solve(resultData, False, linear, columns, no_q, no_s)
 
 def CallRow(row):
     key = 'student' if row['rubric'] else 'rubric'
-    r = bootstrapRow(row['dataset'], row['columns'], row['rubric'], row['linear'])
+    r = bootstrapRow(row['dataset'], row['columns'], row['rubric'], row['linear'], row['no_q'], row['no_s'])
     if r is not None:
         return (r[key], r['variables'])
     return None
 
-def bootstrap(dataset, n, rubric=False, linear=False, columns=None):
+def bootstrap(dataset, n, rubric=False, linear=False, columns=None, no_q = False, no_s = False):
     l = []
     rows = [
         {
             'dataset': dataset,
             'rubric': rubric,
             'linear': linear,
-            'columns': columns
+            'columns': columns,
+            'no_q': no_q,
+            'no_s': no_s
         }
     ]*n
     p = Pool()
@@ -148,7 +190,7 @@ def bootstrap(dataset, n, rubric=False, linear=False, columns=None):
 def compareKBound(x):
     return pd.to_numeric(x, downcast='integer')
 
-def getResults(dataset: pd.DataFrame,c=0.025, rubric=False, n=1000, linear=False, columns=None):
+def getResults(dataset: pd.DataFrame,c=0.025, rubric=False, n=1000, linear=False, columns=None, no_students=False, no_questions=False):
     """
     Estimates the parameters of the model and produces confidence intervals for the estimates using a bootstrap method.
 
@@ -202,16 +244,22 @@ def getResults(dataset: pd.DataFrame,c=0.025, rubric=False, n=1000, linear=False
     dataset = dataset[pd.to_numeric(dataset['bound'], errors='coerce').notnull()]
     dataset[["k", "bound"]] = dataset[["k", "bound"]].apply(compareKBound)
     dataset = dataset[dataset['k'] <= dataset['bound']]
+    no_s = False
+    no_q = False
     if len(columns) > 0:
         for spec in columns:
             dataset = dataset[pd.to_numeric(dataset[spec], errors='coerce').notnull()]
         dataset[columns] = dataset[columns].apply(pd.to_numeric)
         if set(columns).intersection(set(dataset['rubric'].unique())):
             raise Exception('Specified columns cannot be in common with any of the rubric row identifiers.')
+        if no_students:
+            no_s = True
+        if no_questions:
+            no_q = True
     if not len(dataset.index) > 0:
         raise Exception('Invalid pandas dataset, empty dataset.')
     print("Estimating Parameters ...")
-    estimates = solve(dataset, linear=linear, columns=columns)
+    estimates = solve(dataset, linear=linear, columns=columns, no_q=no_q, no_s=no_s)
     print("... Done. Bootstrapping ...")
     if estimates is not None:
         results = bootstrap(dataset, n, rubric, linear=linear, columns=columns)
@@ -240,7 +288,7 @@ def getResults(dataset: pd.DataFrame,c=0.025, rubric=False, n=1000, linear=False
     else:
         raise Exception('Could not find estimates.')
 
-def DisplayResults(dataset: pd.DataFrame,c=0.025, rubric=False, n=1000, linear=False, columns=None):
+def DisplayResults(dataset: pd.DataFrame,c=0.025, rubric=False, n=1000, linear=False, columns=None, no_students=False, no_questions=False):
     """
     Estimates the parameters of the model and produces confidence intervals for the estimates using a bootstrap method. Results are printed out to the console.
 
@@ -275,7 +323,7 @@ def DisplayResults(dataset: pd.DataFrame,c=0.025, rubric=False, n=1000, linear=F
             Log Likelihood : float
 
     """
-    rubricR, studentR, bootstrapR, countE, obs, param, AIC, BIC, McFadden, LR, ChiSquared, LogLikelihood = getResults(dataset, c, rubric, n, linear, columns=columns)
+    rubricR, studentR, bootstrapR, countE, obs, param, AIC, BIC, McFadden, LR, ChiSquared, LogLikelihood = getResults(dataset, c, rubric, n, linear, columns=columns, no_students=no_students, no_questions=no_questions)
     warnings = []
     if rubric is True:
         printedStudent = studentR.merge(bootstrapR, on='Variable', how='left')
@@ -317,7 +365,7 @@ def DisplayResults(dataset: pd.DataFrame,c=0.025, rubric=False, n=1000, linear=F
             print(warning)
     return (rubricR, studentR, bootstrapR, countE, obs, param, AIC, BIC, McFadden, LR, ChiSquared, LogLikelihood)
 
-def SaveResults(dataset: pd.DataFrame,c=0.025, rubric=False, n=1000, linear=False, rubricFile = 'rubric.csv', studentFile = 'student.csv', outputFile = 'output.csv', columns=None):
+def SaveResults(dataset: pd.DataFrame,c=0.025, rubric=False, n=1000, linear=False, rubricFile = 'rubric.csv', studentFile = 'student.csv', outputFile = 'output.csv', columns=None, no_students=False, no_questions=False):
     """
     Estimates the parameters of the model and produces confidence intervals for the estimates using a bootstrap method. Results are printed out to the console and saved to CSV files.
 
@@ -358,7 +406,7 @@ def SaveResults(dataset: pd.DataFrame,c=0.025, rubric=False, n=1000, linear=Fals
             Log Likelihood : float
 
     """
-    rubricR, studentR, bootstrapR, countE, obs, param, AIC, BIC, McFadden, LR, ChiSquared, LogLikelihood  = DisplayResults(dataset, c, rubric, n, linear, columns=columns)
+    rubricR, studentR, bootstrapR, countE, obs, param, AIC, BIC, McFadden, LR, ChiSquared, LogLikelihood  = DisplayResults(dataset, c, rubric, n, linear, columns=columns, no_students=no_students, no_questions=no_questions)
 
     if rubric is True:
         printedStudent = studentR.merge(bootstrapR, on='Variable', how='left')
