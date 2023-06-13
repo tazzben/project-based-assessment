@@ -10,13 +10,20 @@ The library contains the following methods:
 
 getResults and DisplayResults take the following parameters: 
 
-1. A pandas Dataset containing the columns "k", "student", "rubric", "bound".  The "k" column is the rubric level the given student reached on the given rubric row. The "student" column is a student identifier. The "rubric" column is a rubric row identifier. The "bound" column is maximum "k" value possible on the given rubric row.
-2. A float between 0 and 0.5 indicating the portion of the bootstrapped EDF to extract.  For instance, specifying 0.025 would produce the 95% confidence interval. Default is 0.025.
-3. A bool flag indicating to treat the rubric rows as blocks instead of the unique students in the bootstrap.  Defaults to False.
-4. The number of iterations in the bootstrap.  Defaults to 1000.
-5. Uses a simple linear combination of the rubric and student items instead of a sigmoid function when set to true.  Defaults to False.
+1. dataset: A pandas Dataset containing the columns "k", "student", "rubric", "bound".  The "k" column is the rubric level the given student reached on the given rubric row. The "student" column is a student identifier. The "rubric" column is a rubric row identifier. The "bound" column is maximum "k" value possible on the given rubric row.
+2. c: A float between 0 and 0.5 indicating the portion of the bootstrapped EDF to extract.  For instance, specifying 0.025 would produce the 95% confidence interval. Default is 0.025.
+3. rubric: A bool flag indicating to treat the rubric rows as blocks instead of the unique students in the bootstrap.  Defaults to False.
+4. n: The number of iterations in the bootstrap.  Defaults to 1000.
+5. linear: Uses a simple linear combination of the rubric and student items instead of a sigmoid function when set to true.  Defaults to False.
+6. columns: A list of column names to include in the model. The column names cannot be in common with any of the rubric row identifiers. Defaults to None.
+7. no_students: If True, the model will not include student (s_i) estimates.  Defaults to False.
+8. no_questions: If True, the model will not include question/rubric row (q_j) estimates.  Defaults to False.
 
-SaveResults takes the same parameters as getResults and DisplayResults but has the additional parameters of: rubricFile, studentFile, and outputFile (in that order).  These specify the filenames to save the results.  These default to "rubric.csv", "student.csv", and "output.csv".
+SaveResults includes the same parameters as getResults and DisplayResults but has three additional parameters: 
+
+1. rubricFile: File name/path for the rubric results.  Defaults to 'rubric.csv'.
+2. studentFile: File name/path for the student results.  Defaults to 'student.csv'.
+3. outputFile: File name/path for the summary output results.  Defaults to 'output.csv'.
 
 All methods return the following:
 
