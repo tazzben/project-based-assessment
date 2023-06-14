@@ -11,6 +11,9 @@ def main():
     pa.DisplayResults(df, columns=['const','s12'], no_students=True )
     pa.DisplayResults(df, columns=['const','s12'], no_questions=True )
     pa.DisplayResults(df, columns=['const','s12'], no_questions=True, no_students=True )
+    pa.DisplayResults(df, columns=['const',], no_questions=True, no_students=True )
+    pa.DisplayResults(df, columns=['s12',], no_students=True, no_questions=True ) 
+
 
 if __name__ == '__main__':
     main()
