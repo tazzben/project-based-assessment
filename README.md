@@ -54,7 +54,7 @@ The rubric difficulty and student ability pandas dataframes return estimates alo
 
 This package is based on the estimator presented in "[Assessing Proxies of Knowledge and Difficulty with Rubric-Based Instruments](https://doi.org/10.1002/soej.12658)."  There is a [video](https://vimeo.com/735183858) demonstrating using this package in Google Colab and a [video](https://vimeo.com/756447388) explaining the paper.   
 
-The ability to estimate arbitrary columns was added as part of an upcoming paper titled "Are Students Sexist when Grading Each Other? Bias in Peer Grading and a Generalization to the Rubric-Based Estimator." This paper will be uploaded to SSRN in the near future. 
+The ability to estimate arbitrary columns was added as part of an upcoming paper titled "Are Students Sexist when Rating Each Other? Bias in Peer Ratings and a Generalization of the Rubric-Based Estimator." This paper will be uploaded to SSRN in the near future. There is a video showing how to the new arbitrary columns feature [here](https://vimeo.com/941262859).
 
 ## Installation
 
