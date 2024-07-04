@@ -268,7 +268,7 @@ def getResults(dataset: pd.DataFrame,c=0.025, rubric=False, n=1000, linear=False
     estimates = solve(dataset, linear=linear, columns=columns, no_q=no_q, no_s=no_s)
     print("... Done. Bootstrapping ...")
     if estimates is not None:
-        results = bootstrap(dataset, n, rubric, linear=linear, columns=columns)
+        results = bootstrap(dataset, n, rubric, linear=linear, columns=columns, no_q=no_q, no_s=no_s)
         r = results['results']
         l = []
         for var in r['Variable'].unique():
