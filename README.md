@@ -16,8 +16,8 @@ getResults and DisplayResults take the following parameters:
 4. n: The number of iterations in the bootstrap.  Defaults to 1000.
 5. linear: Uses a simple linear combination of the rubric and student items instead of a sigmoid function when set to true.  Defaults to False.
 6. columns: A list of column names to include in the model. The column names cannot be in common with any of the rubric row identifiers. Defaults to None.
-7. no_students: If True, the model will not include student (s_i) estimates.  Defaults to False.
-8. no_questions: If True, the model will not include question/rubric row (q_j) estimates.  Defaults to False.
+7. no_students: If True, the model will not include student (s_i) estimates.  Defaults to False. Only available if columns is specified.
+8. no_questions: If True, the model will not include question/rubric row (q_j) estimates.  Defaults to False. Only available if columns is specified.
 
 SaveResults includes the same parameters as getResults and DisplayResults but has three additional parameters: 
 

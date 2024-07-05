@@ -211,9 +211,9 @@ def getResults(dataset: pd.DataFrame,c=0.025, rubric=False, n=1000, linear=False
     columns : list
         A list of column names to include in the model.  The column names cannot be in common with any of the rubric row identifiers.  Defaults to None.
     no_students : bool
-        If True, the model will not include student (s_i) estimates.  Defaults to False.
+        If True, the model will not include student (s_i) estimates.  Defaults to False. Only available if columns is specified.
     no_questions : bool
-        If True, the model will not include question/rubric row (q_j) estimates.  Defaults to False.
+        If True, the model will not include question/rubric row (q_j) estimates.  Defaults to False. Only available if columns is specified.
 
     Returns:
         Tuple:
@@ -262,6 +262,8 @@ def getResults(dataset: pd.DataFrame,c=0.025, rubric=False, n=1000, linear=False
             no_s = True
         if no_questions:
             no_q = True
+    if len(columns) == 0 and (no_students or no_questions):
+        raise Exception('You cannot exclude students and questions without specifying any columns.')
     if not len(dataset.index) > 0:
         raise Exception('Invalid pandas dataset, empty dataset.')
     print("Estimating Parameters ...")
@@ -320,9 +322,9 @@ def DisplayResults(dataset: pd.DataFrame,c=0.025, rubric=False, n=1000, linear=F
     columns : list
         A list of column names to include in the model. The column names cannot be in common with any of the rubric row identifiers. Defaults to None.
     no_students : bool
-        If True, the model will not include student (s_i) estimates.  Defaults to False.
+        If True, the model will not include student (s_i) estimates.  Defaults to False. Only available if columns is specified.
     no_questions : bool
-        If True, the model will not include question/rubric row (q_j) estimates.  Defaults to False.
+        If True, the model will not include question/rubric row (q_j) estimates.  Defaults to False. Only available if columns is specified.
 
     Returns:
         Tuple:
@@ -407,9 +409,9 @@ def SaveResults(dataset: pd.DataFrame,c=0.025, rubric=False, n=1000, linear=Fals
     columns : list
         A list of column names to include in the model. The column names cannot be in common with any of the rubric row identifiers. Defaults to None.
     no_students : bool
-        If True, the model will not include student (s_i) estimates.  Defaults to False.
+        If True, the model will not include student (s_i) estimates.  Defaults to False. Only available if columns is specified.
     no_questions : bool
-        If True, the model will not include question/rubric row (q_j) estimates.  Defaults to False.
+        If True, the model will not include question/rubric row (q_j) estimates.  Defaults to False. Only available if columns is specified.
 
     Returns:
         Tuple:
