@@ -142,7 +142,7 @@ def solve(dataset, summary = True, linear = False, columns = None, no_q = False,
 
 def bootstrapRow (dataset, columns, rubric=False, linear=False, no_q = False, no_s = False):
     key = 'rubric' if rubric else 'student'
-    ids = dataset[key].unique().flatten().tolist()
+    ids = dataset[key].unique().tolist()
     randomGroupIds = np.random.choice(ids, size=len(ids), replace=True)
     l = []
     for c, i in enumerate(randomGroupIds):
